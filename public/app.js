@@ -2223,52 +2223,67 @@ function editAssign(id,presetTid){
    HORÁRIOS — editor da grelha
    ============================================================ */
 function renderCellEntries(arr,confSet,classId,day,slotId){
-  if(!arr||!arr.length) return `<div class="cell-add">${I.plus}</div>`;
+  if(!arr||!arr.length) return `<div class="cell-add" style="opacity:0.35;font-size:16px;text-align:center;padding:12px 0">+</div>`;
   return arr.map(e=>{
     const col=entryColor(e); const t=e.tid?getTeacher(e.tid):null;
-    const gp=e.grp?`<span class="gp" style="background:${DB.settings.groupColors[e.grp]||'#64748b'}">${esc(e.grp)}</span>`:'';
+    const gp=e.grp?`<span class="gp" style="background:${DB.settings.groupColors[e.grp]||'#64748b'};color:#fff;font-weight:800;font-size:9px;padding:2px 5px;border-radius:4px;margin-right:4px">${esc(e.grp)}</span>`:'';
     const conf=t&&confSet&&confSet.has(e.tid+'|'+day+'|'+slotId);
-    return `<div class="ent${conf?' conf':''}" style="border-left-color:${col}">${gp}<span>${esc(entryName(e))}</span>${t?`<span class="tch">${esc(t.title?t.title+' ':'')}${esc(t.name.split(' ')[0])}</span>`:''}</div>`;
+    return `<div class="ent${conf?' conf':''}" style="border-left:3.5px solid ${col};background:${conf?'rgba(239,68,68,0.12)':'var(--surface-2,#f8fafc)'};padding:6px 8px;border-radius:8px;margin:4px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:relative">
+      <div style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:12.5px;color:var(--title-color,#0f172a)">${gp}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entryName(e))}</span></div>
+      ${t?`<div class="tch" style="font-size:11px;color:var(--text-dim,#64748b);margin-top:3px;display:flex;align-items:center;gap:4px">👤 ${esc(t.title?t.title+' ':'')}${esc(t.name.split(' ')[0])}${conf?' <span style="color:#ef4444;font-weight:800;font-size:9.5px;background:rgba(239,68,68,0.15);padding:1px 4px;border-radius:4px">⚠️ CONFLITO</span>':''}</div>`:''}
+    </div>`;
   }).join('');
 }
+
 VIEWS.grid=function(r){
   if(!UI.cls||!getClass(UI.cls)) UI.cls=DB.classes[0]?.id||null;
   setSub(UI.cls?'Turma '+getClass(UI.cls).name:'—');
-  if(!DB.classes.length){r.innerHTML=`<div class="vhead"><h1>Horários</h1></div>${hubTabs(['grid','tview','rules','export'],'grid')}<div class="card"><div class="empty">${I.classes}<div>Crie primeiro uma turma.</div></div></div>`;return;}
+  if(!DB.classes.length){r.innerHTML=`<div class="vhead"><h1>Editor de Horários</h1></div>${hubTabs(['grid','tview','rules','export'],'grid')}<div class="card"><div class="empty">${I.classes}<div>Crie primeiro uma turma.</div></div></div>`;return;}
   const cls=getClass(UI.cls);
   // conflicts set (teacher double-booked) — aulas combinadas excluídas
   const confSet=new Set(detectConflicts().filter(c=>!c.combined).map(c=>c.key));
 
-  r.innerHTML=`<div class="vhead"><h1>Editor de horários</h1><p>Escolha a turma e clique em qualquer tempo para adicionar disciplinas. Conflitos de professor aparecem a vermelho.</p></div>
+  r.innerHTML=`<div class="vhead"><h1>Editor de Horários</h1><p>Selecione a turma e clique em qualquer célula de tempo para gerir ou atribuir disciplinas.</p></div>
   ${hubTabs(['grid','tview','rules','export'],'grid')}
-  <div class="tt-toolbar">
-    <button type="button" class="btn sm" onclick="selectClassModal(UI.cls, id => { UI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2);color:var(--title-color);font-size:13px;font-weight:700;cursor:pointer">
-      <span>🏫 Turma ${esc(cls.name)} ${cls.type==='mista'?'· '+cls.groups.join('/'):''}</span>
-      <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:4px">▼</span>
-    </button>
-    <div class="btnrow" style="margin-left:auto">
-      <button class="btn sm" id="copyFrom">${I.copy} Copiar de…</button>
-      <button class="btn sm" id="genTT">${I.magic} Gerar</button>
-      <button class="btn sm" id="archTT">${I.archive} Arquivar</button>
-      <button class="btn sm dng" id="clearTT">${I.trash} Limpar</button>
-      <button class="btn sm em" onclick="UI.expTab='class';UI.expTarget='${cls.id}';go('export')">${I.pdf} Imprimir / Exportar</button>
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button type="button" onclick="selectClassModal(UI.cls, id => { UI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:10px;padding:9px 16px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2,#f1f5f9);color:var(--title-color,#0f172a);font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(59,130,246,0.12);transition:all 0.15s ease">
+        <span style="font-size:16px">🏫</span>
+        <span>Turma ${esc(cls.name)} ${cls.type==='mista'?'<span style="font-size:11px;opacity:0.75;font-weight:600">('+cls.groups.join('/')+')</span>':''}</span>
+        <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:2px">▼</span>
+      </button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:${confSet.size?'rgba(239,68,68,0.12)':'rgba(16,185,129,0.12)'};color:${confSet.size?'#ef4444':'#10b981'};border:1px solid ${confSet.size?'rgba(239,68,68,0.3)':'rgba(16,185,129,0.3)'}">
+          ${confSet.size ? '⚠️ '+confSet.size+' Conflitos' : '🟢 Sem Conflitos'}
+        </span>
+        <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:var(--surface-2,#f1f5f9);color:var(--text-muted,#475569);border:1px solid var(--border-color,#e2e8f0)">
+          📅 Ano Lectivo ${esc(DB.settings.year)}
+        </span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm" id="copyFrom" style="border-radius:10px;font-weight:600">${I.copy} Copiar de…</button>
+      <button class="btn sm" id="genTT" style="border-radius:10px;font-weight:600">${I.magic} Gerar IA</button>
+      <button class="btn sm" id="archTT" style="border-radius:10px;font-weight:600">${I.archive} Arquivar</button>
+      <button class="btn sm dng" id="clearTT" style="border-radius:10px;font-weight:600">${I.trash} Limpar</button>
+      <button class="btn sm em" onclick="UI.expTab='class';UI.expTarget='${cls.id}';go('export')" style="border-radius:10px;font-weight:700">${I.pdf} Exportar / Imprimir</button>
     </div>
   </div>
-  <div class="tt-wrap"><table class="tt"><thead><tr><th>Tempos</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody id="ttBody"></tbody></table></div>
-  <div class="help" style="margin-top:14px">${I.info}<div>Grupos coloridos (A/B1/B2) permitem várias disciplinas no mesmo tempo. Sem grupo = aula para a turma inteira.</div></div>`;
+  <div class="tt-wrap" style="border-radius:16px;box-shadow:var(--shadow-card);overflow:hidden"><table class="tt"><thead><tr><th style="padding:12px 8px;font-size:12px;font-weight:800;letter-spacing:0.5px">TEMPOS</th>${DAYS.map(d=>`<th style="padding:12px 8px;font-size:12px;font-weight:800;letter-spacing:0.5px">${d}</th>`).join('')}</tr></thead><tbody id="ttBody"></tbody></table></div>
+  <div class="help" style="margin-top:16px;border-radius:12px;padding:12px 16px">${I.info}<div><b>Dica de Grupos:</b> Grupos coloridos (A/B1/B2) permitem leccionar disciplinas em simultâneo (ex: Turma Mista). Sem grupo = aula para a turma inteira.</div></div>`;
 
   const body=$('#ttBody'); let html='';
   const s=DB.settings;
-  if(s.hino.on) html+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#fbf3e0;color:#8a6418;border-color:#ecd9a6">🎵 ${esc(s.hino.label)}: ${s.hino.start} – ${s.hino.end}</td></tr>`;
-  html+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar">Período da Manhã</td></tr>`;
+  if(s.hino.on) html+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#fef3c7;color:#92400e;border-color:#fde68a;font-weight:700;padding:8px">🎵 ${esc(s.hino.label)}: ${s.hino.start} – ${s.hino.end}</td></tr>`;
+  html+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar" style="background:var(--surface-2,#f1f5f9);font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px">Período da Manhã</td></tr>`;
   html+=renderPeriodRows('morning',cls,confSet);
-  html+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar">🍽 Intervalo para almoço — ${s.lunch.start} às ${s.lunch.end} (${gapMin(s.lunch.start,s.lunch.end)} min)</td></tr>`;
-  html+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar">Período da Tarde</td></tr>`;
+  html+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#e0f2fe;color:#075985;border-color:#bae6fd;font-weight:700;padding:8px">🍽 Intervalo para almoço — ${s.lunch.start} às ${s.lunch.end} (${gapMin(s.lunch.start,s.lunch.end)} min)</td></tr>`;
+  html+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar" style="background:var(--surface-2,#f1f5f9);font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px">Período da Tarde</td></tr>`;
   html+=renderPeriodRows('afternoon',cls,confSet);
-  html+=`<tr><td colspan="${DAYS.length+1}" class="saida-bar">✅ Saída — ${s.saida}</td></tr>`;
+  html+=`<tr><td colspan="${DAYS.length+1}" class="saida-bar" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;font-weight:700;padding:8px">✅ Saída — ${s.saida}</td></tr>`;
   body.innerHTML=html;
   body.querySelectorAll('td.cell').forEach(td=>td.onclick=()=>editCell(cls.id,td.dataset.d,td.dataset.s));
-  $('#clsSel').onchange=e=>{UI.cls=e.target.value;render();};
+  if($('#clsSel')) $('#clsSel').onchange=e=>{UI.cls=e.target.value;render();};
   $('#clearTT').onclick=()=>confirmDel(`Limpar todo o horário da turma ${cls.name}?`,()=>{DAYS.forEach(d=>DB.tt[cls.id][d]={});upd(null,true);toast('Horário limpo');});
   $('#genTT').onclick=()=>confirmAct(`Gerar automaticamente o horário da turma ${cls.name}? Os blocos não-fixos serão substituídos. (Defina as condições em "Geração automática".)`,'Gerar',()=>{doGenerate([cls.id],'Turma '+cls.name);});
   $('#archTT').onclick=saveVersionDialog;
@@ -2277,9 +2292,9 @@ VIEWS.grid=function(r){
 function renderPeriodRows(period,cls,confSet){
   const rows=periodRows(DB.grid[period]); let h='';
   rows.forEach(row=>{
-    if(row.t==='break'){h+=`<tr class="brk"><td></td><td colspan="${DAYS.length}">Intervalo (${row.min} min)</td></tr>`;return;}
+    if(row.t==='break'){h+=`<tr class="brk"><td></td><td colspan="${DAYS.length}" style="padding:6px;font-weight:600;font-style:italic">Intervalo (${row.min} min)</td></tr>`;return;}
     const sl=row.slot;
-    h+=`<tr><td class="tcol">${sl.s}<br>${sl.e}</td>${DAYS.map(d=>{
+    h+=`<tr><td class="tcol" style="font-weight:700;vertical-align:middle">${sl.s}<br><span style="font-size:10px;opacity:0.75">${sl.e}</span></td>${DAYS.map(d=>{
       const arr=DB.tt[cls.id]?.[d]?.[sl.id]||[];
       return `<td class="cell" data-d="${d}" data-s="${sl.id}">${renderCellEntries(arr,confSet,cls.id,d,sl.id)}</td>`;
     }).join('')}</tr>`;
@@ -2357,41 +2372,48 @@ VIEWS.tview=function(r){
   const t=getTeacher(UI.teacher); const st=teacherStats(t.id);
   setSub(teacherLabel(t));
   const sched=teacherSchedule(t.id);
-  r.innerHTML=`<div class="vhead"><h1>Vista do professor</h1><p>Horário individual gerado automaticamente a partir das grelhas das turmas.</p></div>
+  r.innerHTML=`<div class="vhead"><h1>Vista por Professor</h1><p>Horário individual gerado automaticamente a partir das grelhas de todas as turmas.</p></div>
   ${hubTabs(['grid','tview','rules','export'],'tview')}
-  <div class="tt-toolbar">
-    <button type="button" class="btn sm" onclick="selectTeacherModal(UI.teacher, id => { UI.teacher = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2);color:var(--title-color);font-size:13px;font-weight:700;cursor:pointer">
-      <span>👤 ${esc(teacherLabel(t))}</span>
-      <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:4px">▼</span>
-    </button>
-    <div style="display:flex;gap:8px;margin-left:6px">
-      <span class="tag">${I.clock} ${st.total} aulas</span>
-      <span class="tag">${st.classes.join(', ')||'—'}</span>
+  <div style="background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button type="button" onclick="selectTeacherModal(UI.teacher, id => { UI.teacher = id; render(); })" style="display:inline-flex;align-items:center;gap:10px;padding:9px 16px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2,#f1f5f9);color:var(--title-color,#0f172a);font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(59,130,246,0.12)">
+        <span style="font-size:16px">👤</span>
+        <span>${esc(teacherLabel(t))}</span>
+        <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:2px">▼</span>
+      </button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:rgba(59,130,246,0.12);color:var(--brand-blue,#3b82f6);border:1px solid rgba(59,130,246,0.3)">
+          ⏰ ${st.total} Aulas / semana
+        </span>
+        <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:var(--surface-2,#f1f5f9);color:var(--text-muted,#475569);border:1px solid var(--border-color,#e2e8f0)">
+          🏫 ${st.classes.length ? st.classes.join(', ') : 'Sem turmas'}
+        </span>
+      </div>
     </div>
-    <button class="btn sm em" style="margin-left:auto" onclick="UI.expTab='teacher';UI.expTarget='${t.id}';go('export')">${I.pdf} Imprimir / Exportar</button>
+    <button class="btn sm em" onclick="UI.expTab='teacher';UI.expTarget='${t.id}';go('export')" style="border-radius:10px;font-weight:700">${I.pdf} Imprimir / Exportar Horário</button>
   </div>
-  <div class="tt-wrap"><table class="tt"><thead><tr><th>Tempos</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>${
+  <div class="tt-wrap" style="border-radius:16px;box-shadow:var(--shadow-card);overflow:hidden"><table class="tt"><thead><tr><th style="padding:12px 8px;font-size:12px;font-weight:800;letter-spacing:0.5px">TEMPOS</th>${DAYS.map(d=>`<th style="padding:12px 8px;font-size:12px;font-weight:800;letter-spacing:0.5px">${d}</th>`).join('')}</tr></thead><tbody>${
     (()=>{let h='';const sset=DB.settings;
-      if(sset.hino.on)h+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#fbf3e0;color:#8a6418;border-color:#ecd9a6">🎵 ${esc(sset.hino.label)}: ${sset.hino.start} – ${sset.hino.end}</td></tr>`;
-      h+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar">Período da Manhã</td></tr>`;
+      if(sset.hino.on)h+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#fef3c7;color:#92400e;border-color:#fde68a;font-weight:700;padding:8px">🎵 ${esc(sset.hino.label)}: ${sset.hino.start} – ${sset.hino.end}</td></tr>`;
+      h+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar" style="background:var(--surface-2,#f1f5f9);font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px">Período da Manhã</td></tr>`;
       h+=tviewRows('morning',sched);
-      h+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar">🍽 Intervalo para almoço — ${sset.lunch.start} às ${sset.lunch.end}</td></tr>`;
-      h+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar">Período da Tarde</td></tr>`;
+      h+=`<tr><td colspan="${DAYS.length+1}" class="lunch-bar" style="background:#e0f2fe;color:#075985;border-color:#bae6fd;font-weight:700;padding:8px">🍽 Intervalo para almoço — ${sset.lunch.start} às ${sset.lunch.end}</td></tr>`;
+      h+=`<tr><td colspan="${DAYS.length+1}" class="sect-bar" style="background:var(--surface-2,#f1f5f9);font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px">Período da Tarde</td></tr>`;
       h+=tviewRows('afternoon',sched);
-      h+=`<tr><td colspan="${DAYS.length+1}" class="saida-bar">✅ Saída — ${sset.saida}</td></tr>`;
+      h+=`<tr><td colspan="${DAYS.length+1}" class="saida-bar" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;font-weight:700;padding:8px">✅ Saída — ${sset.saida}</td></tr>`;
       return h;})()
   }</tbody></table></div>
-  ${t.notes?`<div class="help" style="margin-top:14px">${I.info}<div><b>Anotações:</b> ${esc(t.notes)}</div></div>`:''}`;
+  ${t.notes?`<div class="help" style="margin-top:16px;border-radius:12px">${I.info}<div><b>Anotações do Docente:</b> ${esc(t.notes)}</div></div>`:''}`;
 };
 function tviewRows(period,sched){
   const rows=periodRows(DB.grid[period]); let h='';
   rows.forEach(row=>{
-    if(row.t==='break'){h+=`<tr class="brk"><td></td><td colspan="${DAYS.length}">Intervalo (${row.min} min)</td></tr>`;return;}
+    if(row.t==='break'){h+=`<tr class="brk"><td></td><td colspan="${DAYS.length}" style="padding:6px;font-weight:600;font-style:italic">Intervalo (${row.min} min)</td></tr>`;return;}
     const sl=row.slot;
-    h+=`<tr><td class="tcol">${sl.s}<br>${sl.e}</td>${DAYS.map(d=>{
+    h+=`<tr><td class="tcol" style="font-weight:700;vertical-align:middle">${sl.s}<br><span style="font-size:10px;opacity:0.75">${sl.e}</span></td>${DAYS.map(d=>{
       const list=sched[d][sl.id]||[];
-      if(!list.length)return `<td class="cell" style="cursor:default"><div style="text-align:center;color:#cbd2de;font-size:13px">—</div></td>`;
-      return `<td class="cell" style="cursor:default">${list.map(x=>`<div class="ent" style="border-left-color:${x.col}"><span>${esc(x.name)}</span><span class="tch">${esc(x.cls)}${x.grp?'/'+esc(x.grp):''}</span></div>`).join('')}</td>`;
+      if(!list.length)return `<td class="cell" style="cursor:default"><div style="text-align:center;color:var(--text-dim,#94a3b8);font-size:13px;opacity:0.5">—</div></td>`;
+      return `<td class="cell" style="cursor:default">${list.map(x=>`<div class="ent" style="border-left:3.5px solid ${x.col};background:var(--surface-2,#f8fafc);padding:6px 8px;border-radius:8px;margin:4px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04)"><span style="font-weight:700;font-size:12.5px;color:var(--title-color,#0f172a)">${esc(x.name)}</span><span class="tch" style="font-size:11px;color:var(--brand-blue,#0284c7);font-weight:700;margin-top:2px;display:block">🏫 ${esc(x.cls)}${x.grp?' <span style="background:#64748b;color:#fff;padding:1px 4px;border-radius:3px;font-size:9px">'+esc(x.grp)+'</span>':''}</span></div>`).join('')}</td>`;
     }).join('')}</tr>`;
   });
   return h;
