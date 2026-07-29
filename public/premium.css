@@ -150,6 +150,29 @@ body {
   background: var(--brand-emerald) !important;
 }
 
+/* Topbar Action Buttons (.navtoggle, .fsbtn) */
+.navtoggle, .fsbtn {
+  background: var(--surface-2) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.2s ease !important;
+}
+
+.navtoggle svg, .fsbtn svg {
+  stroke: var(--text-main) !important;
+}
+
+.navtoggle:hover, .fsbtn:hover, .navtoggle:active, .fsbtn:active {
+  background: var(--card-hover) !important;
+  border-color: var(--brand-cyan) !important;
+  color: var(--brand-cyan) !important;
+}
+
+.navtoggle:hover svg, .fsbtn:hover svg, .navtoggle:active svg, .fsbtn:active svg {
+  stroke: var(--brand-cyan) !important;
+}
+
 /* ==================== SIDEBAR ==================== */
 .side {
   background: var(--side-bg) !important;
