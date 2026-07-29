@@ -376,6 +376,28 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 4px rgba(0, 114, 255, 0.15) !important;
 }
 
+/* ==================== TABLE CELL FORM CONTROLS ==================== */
+table td textarea,
+table td input:not([type=checkbox]):not([type=radio]) {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 6px !important;
+  background: var(--surface, #ffffff) !important;
+  border: 1px solid var(--border-color, #e2e8f0) !important;
+  padding: 6px 8px !important;
+  margin: 0 !important;
+  display: block !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+table td textarea:focus,
+table td input:focus {
+  background: #ffffff !important;
+  border-color: var(--brand-blue, #3b82f6) !important;
+  box-shadow: 0 0 0 3px rgba(0, 114, 255, 0.2) !important;
+}
+
 .field label {
   color: var(--text-muted) !important;
   font-weight: 700 !important;

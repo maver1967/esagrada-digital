@@ -366,6 +366,141 @@ function closeModal(){ $('#mask').classList.remove('on'); }
 $('#mask').addEventListener('click',e=>{ if(e.target.id==='mask') closeModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 
+/* ==================== CUSTOM ELEGANT PICKER MODAL ==================== */
+function openPickerModal({ title, subtitle, items, selectedValue, onSelect }) {
+  function getListHtml(term) {
+    const q = (term || '').toLowerCase().trim();
+    const filtered = items.filter(it => 
+      it.label.toLowerCase().includes(q) || (it.sublabel && it.sublabel.toLowerCase().includes(q))
+    );
+    if (!filtered.length) {
+      return `<div style="text-align:center;padding:28px 16px;color:var(--text-dim,#888);font-size:13px">Nenhum resultado encontrado.</div>`;
+    }
+    return filtered.map(it => {
+      const isSel = String(it.value) === String(selectedValue);
+      const initials = (it.label || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      const bg = it.bg || 'linear-gradient(135deg,#3b82f6,#2563eb)';
+      return `<div class="picker-item-row" data-val="${esc(it.value)}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;margin-bottom:8px;cursor:pointer;background:${isSel ? 'var(--surface-2, rgba(59,130,246,0.12))' : 'var(--card-bg, #fff)'};border:1.5px solid ${isSel ? 'var(--brand-blue, #3b82f6)' : 'var(--border-color, #e2e8f0)'};box-shadow:${isSel ? '0 3px 12px rgba(59,130,246,0.2)' : '0 1px 3px rgba(0,0,0,0.03)'};transition:all 0.15s ease">
+        <div style="width:42px;height:42px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+          ${it.icon || initials}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:${isSel ? 'var(--brand-blue, #3b82f6)' : 'var(--title-color, #0f172a)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.label)}</div>
+          ${it.sublabel ? `<div style="font-size:12px;color:var(--text-dim, #64748b);margin-top:2px">${esc(it.sublabel)}</div>` : ''}
+        </div>
+        <div style="width:24px;height:24px;border-radius:50%;border:2px solid ${isSel ? 'var(--brand-blue, #3b82f6)' : 'var(--border-color, #cbd5e1)'};background:${isSel ? 'var(--brand-blue, #3b82f6)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;flex-shrink:0">
+          ${isSel ? '✓' : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  openModal(`
+    <div class="modal-h" style="padding:16px 20px;border-bottom:1px solid var(--border-color)">
+      <div>
+        <h3 style="margin:0;font-size:17px;font-weight:800;color:var(--title-color)">${esc(title || 'Selecionar')}</h3>
+        ${subtitle ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px">${esc(subtitle)}</div>` : ''}
+      </div>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b" style="padding:16px;max-height:75vh;overflow-y:auto">
+      ${items.length > 5 ? `
+        <div style="margin-bottom:12px">
+          <input type="text" id="pkSearch" placeholder="🔍 Pesquisar..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--surface-2);color:var(--text-main);font-size:13px">
+        </div>
+      ` : ''}
+      <div id="pkContainer">${getListHtml('')}</div>
+    </div>
+  `);
+
+  function bindItemClicks() {
+    document.querySelectorAll('.picker-item-row').forEach(row => {
+      row.onclick = () => {
+        const val = row.dataset.val;
+        closeModal();
+        onSelect(val);
+      };
+    });
+  }
+
+  const sInp = $('#pkSearch');
+  if (sInp) {
+    sInp.oninput = (e) => {
+      $('#pkContainer').innerHTML = getListHtml(e.target.value);
+      bindItemClicks();
+    };
+  }
+  bindItemClicks();
+}
+
+function selectTeacherModal(selectedId, onSelect) {
+  const sorted = DB.teachers.slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const items = sorted.map(t => {
+    const st = typeof teacherStats === 'function' ? teacherStats(t.id) : null;
+    const sub = st ? `${st.total} aula(s) · ${st.classes.join(', ')||"Sem turmas"}` : (t.departamento || 'Docente');
+    const bgColors = ['linear-gradient(135deg,#3b82f6,#2563eb)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#8b5cf6,#6d28d9)','linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#ec4899,#be185d)'];
+    const idx = (t.name.length + (t.id.charCodeAt(0)||0)) % bgColors.length;
+    const iconHtml = t.foto ? `<img src="${t.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : null;
+    return {
+      value: t.id,
+      label: teacherLabel(t),
+      sublabel: sub,
+      icon: iconHtml,
+      bg: bgColors[idx]
+    };
+  });
+  openPickerModal({
+    title: 'Selecione o Professor',
+    subtitle: `${DB.teachers.length} docentes cadastrados`,
+    items,
+    selectedValue: selectedId,
+    onSelect
+  });
+}
+
+function selectClassModal(selectedId, onSelect) {
+  const items = DB.classes.map(c => {
+    const bg = c.type === 'mista' ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#3b82f6,#2563eb)';
+    return {
+      value: c.id,
+      label: `Turma ${c.name}`,
+      sublabel: c.type === 'mista' ? `Mista (${c.groups.join('/')})` : 'Turma inteira',
+      bg
+    };
+  });
+  openPickerModal({
+    title: 'Selecione a Turma',
+    subtitle: `${DB.classes.length} turmas ativas`,
+    items,
+    selectedValue: selectedId,
+    onSelect
+  });
+}
+
+function selectPairModal(selectedPair, onSelect) {
+  const tid = typeof currentTeacherId === 'function' ? currentTeacherId() : DB.teachers[0]?.id;
+  const pairs = typeof plPairs === 'function' ? plPairs(tid) : [];
+  const items = pairs.map(p => {
+    const pairKey = p.tk + '::' + p.disc;
+    return {
+      value: pairKey,
+      label: `Turma ${p.tk} · ${p.disc}`,
+      sublabel: `Disciplina atribuída a ${teacherLabel(getTeacher(tid))}`,
+      icon: '📚',
+      bg: 'linear-gradient(135deg,#10b981,#059669)'
+    };
+  });
+  openPickerModal({
+    title: 'Selecione a Turma e Disciplina',
+    subtitle: `Disciplinas atribuídas a ${teacherLabel(getTeacher(tid))}`,
+    items,
+    selectedValue: selectedPair,
+    onSelect
+  });
+}
+
+
+
 /* ---------- NAV / ROUTER (organização por grupos) ---------- */
 const NAV_TOP = {id:'dash',label:'Painel',icon:'dash'};
 const NAV_PORTARIA = {id:'portaria',label:'Portaria & Acessos',icon:'idcard'};
@@ -516,10 +651,10 @@ function buildNav(){
           return `<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(tName)}${dtBadge}</option>`;
         }).join('');
 
-        extra=` &nbsp;·&nbsp; A entrar como: <select id="provTeacherSel" style="background:#fff;border:1px solid #e0cf9e;border-radius:6px;padding:3px 6px;font-size:12px;font-weight:600;color:#7a5b12">${opts}</select>`;
+        const curTObj = getTeacher(cur);
+        extra=` &nbsp;·&nbsp; A entrar como: <button type="button" class="btn sm" onclick="selectTeacherModal('${cur}', id => { PREVIEW_TEACHER=id; if(typeof DIUI!=='undefined'){DIUI.sel=0;DIUI.data=null;} render(); })" style="padding:3px 10px;border-radius:8px;border:1px solid #e0cf9e;background:#fff;font-size:12px;font-weight:700;color:#7a5b12;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 ${esc(curTObj ? teacherLabel(curTObj) : 'Trocar Docente')} <span style="font-size:9px">▼</span></button>`;
       }
       $('#previewText').innerHTML = `Pré-visualização do perfil <b>${ROLES[PREVIEW_ROLE].label}</b> — ${ROLES[PREVIEW_ROLE].desc} <span style="opacity:.7">(simulação; ainda é o seu acesso de direcção)</span>${extra}`;
-      const ps=$('#provTeacherSel'); if(ps) ps.onchange=e=>{ PREVIEW_TEACHER=e.target.value; if(typeof DIUI!=='undefined'){DIUI.sel=0;DIUI.data=null;} render(); };
     }
   }
 }
@@ -543,6 +678,26 @@ function setSub(s){
   const el=$('#topSub');
   if(el) el.textContent=s;
 }
+function autoGrowTextarea(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  const minH = parseInt(el.dataset.minH || '42', 10);
+  const scrollH = el.scrollHeight;
+  el.style.height = Math.max(scrollH + 4, minH) + 'px';
+}
+
+function autoGrowAllTextareas() {
+  setTimeout(() => {
+    document.querySelectorAll('textarea.auto-grow, textarea[oninput*="scrollHeight"], textarea[onchange*="pdFunc"], textarea[onchange*="quinzRowSet"], textarea[onchange*="plUnitSet"]').forEach(ta => {
+      autoGrowTextarea(ta);
+    });
+  }, 40);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', autoGrowAllTextareas);
+}
+
 function render(){
   const r=$('#root');
   if(!r) return;
@@ -550,6 +705,7 @@ function render(){
   try {
     const fn = VIEWS[UI.view] || (()=>r.innerHTML='<div class="empty">Em construção</div>');
     fn(r);
+    autoGrowAllTextareas();
   } catch(e) {
     console.error('Render error in view ' + UI.view + ':', e);
     r.innerHTML=`<div class="card" style="padding:24px;margin:20px;background:#fff5f5;border:1.5px solid #f87171;border-radius:16px;color:#991b1b">
@@ -2086,7 +2242,10 @@ VIEWS.grid=function(r){
   r.innerHTML=`<div class="vhead"><h1>Editor de horários</h1><p>Escolha a turma e clique em qualquer tempo para adicionar disciplinas. Conflitos de professor aparecem a vermelho.</p></div>
   ${hubTabs(['grid','tview','rules','export'],'grid')}
   <div class="tt-toolbar">
-    <select id="clsSel">${DB.classes.map(c=>`<option value="${c.id}" ${c.id===UI.cls?'selected':''}>Turma ${esc(c.name)} ${c.type==='mista'?'· '+c.groups.join('/'):''}</option>`).join('')}</select>
+    <button type="button" class="btn sm" onclick="selectClassModal(UI.cls, id => { UI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2);color:var(--title-color);font-size:13px;font-weight:700;cursor:pointer">
+      <span>🏫 Turma ${esc(cls.name)} ${cls.type==='mista'?'· '+cls.groups.join('/'):''}</span>
+      <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:4px">▼</span>
+    </button>
     <div class="btnrow" style="margin-left:auto">
       <button class="btn sm" id="copyFrom">${I.copy} Copiar de…</button>
       <button class="btn sm" id="genTT">${I.magic} Gerar</button>
@@ -2201,7 +2360,10 @@ VIEWS.tview=function(r){
   r.innerHTML=`<div class="vhead"><h1>Vista do professor</h1><p>Horário individual gerado automaticamente a partir das grelhas das turmas.</p></div>
   ${hubTabs(['grid','tview','rules','export'],'tview')}
   <div class="tt-toolbar">
-    <select id="tSel">${DB.teachers.map(x=>`<option value="${x.id}" ${x.id===t.id?'selected':''}>${esc(teacherLabel(x))}</option>`).join('')}</select>
+    <button type="button" class="btn sm" onclick="selectTeacherModal(UI.teacher, id => { UI.teacher = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2);color:var(--title-color);font-size:13px;font-weight:700;cursor:pointer">
+      <span>👤 ${esc(teacherLabel(t))}</span>
+      <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:4px">▼</span>
+    </button>
     <div style="display:flex;gap:8px;margin-left:6px">
       <span class="tag">${I.clock} ${st.total} aulas</span>
       <span class="tag">${st.classes.join(', ')||'—'}</span>
@@ -2220,7 +2382,6 @@ VIEWS.tview=function(r){
       return h;})()
   }</tbody></table></div>
   ${t.notes?`<div class="help" style="margin-top:14px">${I.info}<div><b>Anotações:</b> ${esc(t.notes)}</div></div>`:''}`;
-  $('#tSel').onchange=e=>{UI.teacher=e.target.value;render();};
 };
 function tviewRows(period,sched){
   const rows=periodRows(DB.grid[period]); let h='';
@@ -6844,17 +7005,17 @@ function plDiCreate(key,tri,qIdx,num,tk,disc,tid){
 }
 
 function pdEditor(d){
-  const fld=(lab,f,val,w,ph)=>`<div style="display:flex;flex-direction:column;gap:3px;${w?'flex:'+w:''}"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">${lab}</label><input type="text" value="${esc(val||'')}" placeholder="${ph||''}" onchange="pdField('${d.id}','${f}',this.value)" style="padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text-main,#0f172a)"></div>`;
-  const area=(lab,f,val,rows)=>`<div style="display:flex;flex-direction:column;gap:3px;margin-top:8px"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">${lab}</label><textarea rows="${rows||2}" onchange="pdField('${d.id}','${f}',this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;resize:vertical;background:var(--surface,#fff);color:var(--text-main,#0f172a)">${esc(val||'')}</textarea></div>`;
+  const fld=(lab,f,val,w,ph)=>`<div style="display:flex;flex-direction:column;gap:3px;${w?'flex:'+w:''}"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">${lab}</label><input type="text" value="${esc(val||'')}" placeholder="${ph||''}" onchange="pdField('${d.id}','${f}',this.value)" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text-main,#0f172a)"></div>`;
+  const area=(lab,f,val,minH)=>`<div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;width:100%;box-sizing:border-box"><label style="font-size:10.5px;font-weight:800;color:var(--text-dim,#64748b);text-transform:uppercase;letter-spacing:0.4px">${lab}</label><textarea class="auto-grow" data-min-h="${minH||60}" oninput="autoGrowTextarea(this)" onchange="pdField('${d.id}','${f}',this.value)" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-color,#cbd5e1);border-radius:10px;font-size:13.5px;line-height:1.5;resize:vertical;overflow:hidden;min-height:${minH||60}px;background:var(--surface,#fff);color:var(--text-main,#0f172a);font-family:inherit">${esc(val||'')}</textarea></div>`;
 
-  const fcell=(i,f,ph)=>`<textarea oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onchange="pdFunc('${d.id}',${i},'${f}',this.value)" placeholder="${ph||''}" style="width:100%;border:none;background:transparent;font-size:12px;line-height:1.35;resize:vertical;min-height:34px;font-family:inherit;color:var(--text-main,#26324a);padding:3px">${esc(d.func[i][f]||'')}</textarea>`;
+  const fcell=(i,f,ph)=>`<textarea class="auto-grow" data-min-h="56" oninput="autoGrowTextarea(this)" onchange="pdFunc('${d.id}',${i},'${f}',this.value)" placeholder="${ph||''}" style="width:100%;box-sizing:border-box;border:1px solid var(--border-color,#cbd5e1);background:var(--surface,#fff);border-radius:8px;font-size:12.5px;line-height:1.45;resize:vertical;overflow:hidden;min-height:56px;font-family:inherit;color:var(--text-main,#1e293b);padding:8px 10px">${esc(d.func[i][f]||'')}</textarea>`;
   const frows=d.func.map((fr,i)=>`<tr style="background:${i%2?'var(--surface-2,#fbfbfc)':'var(--card-bg,#fff)'}">
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:5px 7px;font-size:12px;font-weight:700;color:var(--title-color,#26324a);min-width:150px">${esc(fr.fn)}<div style="margin-top:4px;font-weight:400"><input type="number" value="${esc(fr.tempo||'')}" onchange="pdFunc('${d.id}',${i},'tempo',this.value)" style="width:48px;border:1px solid var(--border-color,var(--line));border-radius:6px;font-size:12px;padding:3px 6px;text-align:center;background:var(--surface,#fff);color:var(--text-main,#26324a)"> min</div></td>
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:160px">${fcell(i,'cont')}</td>
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:170px">${fcell(i,'actP')}</td>
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:150px">${fcell(i,'actA')}</td>
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:120px">${fcell(i,'met')}</td>
-    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:120px">${fcell(i,'mat')}</td></tr>`).join('');
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:8px 6px;font-size:12px;font-weight:700;color:var(--title-color,#26324a);min-width:140px">${esc(fr.fn)}<div style="margin-top:6px;font-weight:400"><input type="number" value="${esc(fr.tempo||'')}" onchange="pdFunc('${d.id}',${i},'tempo',this.value)" style="width:52px;box-sizing:border-box;border:1px solid var(--border-color,var(--line));border-radius:6px;font-size:12px;padding:4px 6px;text-align:center;background:var(--surface,#fff);color:var(--text-main,#26324a)"> min</div></td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:4px;min-width:220px">${fcell(i,'cont')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:4px;min-width:220px">${fcell(i,'actP')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:4px;min-width:220px">${fcell(i,'actA')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:4px;min-width:170px">${fcell(i,'met')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:4px;min-width:170px">${fcell(i,'mat')}</td></tr>`).join('');
 
   return `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
