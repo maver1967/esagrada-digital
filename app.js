@@ -7400,10 +7400,6 @@ function plRenderAnalitico(key,tri,tk,disc,triObj,cls){
   <div class="help">${I.info}<div>Guardado automaticamente. O <b>Plano Quinzenal</b> (Fase 2b) selecionará lições deste analítico e o <b>Plano Diário</b> (Fase 2c) expandirá cada lição — levando o <b>tema</b> ao Diário de Aula.</div></div>`;
 }
 
-function diIsoToDia(iso){ if(!iso)return null; const d=new Date(iso+'T12:00:00'); return DIA_BY_JS[d.getDay()]||null; }
-function diDiaFromIso(iso){ return diIsoToDia(iso); }
-function diFmtData(iso){ if(!iso)return''; const[y,m,dd]=iso.split('-'); return `${dd}/${m}/${y}`; }
-
 /* —— Aulas do professor num dado dia (agrupadas por turma+disciplina) —— */
 function diLessons(tid,dia){
   if(!tid||!dia) return [];
