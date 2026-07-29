@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor de Horários · ESAGRADA</title>
+
+<meta name="theme-color" content="#172a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ESAGRADA">
+<link rel="apple-touch-icon" href="/assets/pwa_icon_192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/premium.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+<script>
+  (function(){
+    var theme = localStorage.getItem('esagrada_theme');
+    if(theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+  function toggleTheme() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if(isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('esagrada_theme', 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('esagrada_theme', 'dark');
+    }
+  }
+</script>
+<div class="app" id="app" style="display:none">
+  <aside class="side">
+    <div class="brand">
+      <div class="mark" id="brandMark"></div>
+      <div><div class="bt">ESAGRADA</div><div class="bs">Plataforma digital</div></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot">Escola Pré-Universitária<br>Sagrada Família · Maxixe<br><span style="opacity:.6">v3.4 · 25/07/2026 · dados locais</span></div>
+  </aside>
+  <header class="topbar">
+    <button class="navtoggle" id="navToggle" aria-label="Abrir menu" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+    <div class="ttl" id="topTitle">Painel<small id="topSub">Visão geral</small></div>
+    <div class="actions">
+      <button class="fsbtn" id="themeBtn" aria-label="Mudar Tema" title="Mudar Tema" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
+      <button class="fsbtn" id="fsBtn" aria-label="Ecrã inteiro" title="Ecrã inteiro" onclick="toggleFullscreen()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <span class="savechip" id="saveChip"><span class="dot"></span>Guardado</span>
+      <span class="yearpill" id="yearPill">2026</span>
+    </div>
+  </header>
+  <div id="previewBanner" style="display:none;align-items:center;gap:10px;padding:9px 16px;background:#fff4e0;border-bottom:1px solid #f0d9a8;color:#7a5b12;font-size:12.5px;grid-column:2;flex-wrap:wrap;z-index:40">
+    <span style="flex-shrink:0;font-size:15px">👁</span><span id="previewText" style="flex:1"></span>
+    <button onclick="setRole('direcao')" style="flex-shrink:0;background:#7a5b12;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer">Voltar à Direção</button>
+  </div>
+  <div class="side-backdrop" id="sideBackdrop" onclick="closeSidebar()"></div>
+  <main class="main"><div id="root" class="view"></div></main>
+</div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div class="pwa-banner" id="pwaBanner"><img class="ico" id="pwaIco" alt=""><div class="txt"><b>Instalar a app ESAGRADA</b><span>Adicione o ícone ao ecrã inicial do telemóvel</span></div><button class="pwa-go" onclick="pwaInstall()">Instalar</button><button class="pwa-x" onclick="pwaDismiss()" aria-label="Fechar">&times;</button></div>
+<div id="exportStage" style="position:fixed;left:-99999px;top:0"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="/qrcode.js"></script>
+  <script src="/app.js?v=3.4.6"></script>
+  <script type="module">
+    import { registerSW } from 'virtual:pwa-register';
+    registerSW({ immediate: true });
+  </script>
+</body>
+</html>
