@@ -4006,14 +4006,14 @@ function openAlunoFicha(cod, tab){
 
   if(tab==='fin'){
     const s=finSit(cod);
-    const tile=(l,v,c)=>`<div style="flex:1;min-width:110px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><div style="font-size:10.5px;color:#888;text-transform:uppercase;letter-spacing:.4px">${l}</div><div style="font-family:var(--serif);font-size:18px;font-weight:700;color:${c};margin-top:2px">${v}</div></div>`;
+    const tile=(l,v,c)=>`<div style="flex:1;min-width:110px;background:var(--surface-2,#fff);border:1px solid var(--border-color,#eee);border-radius:10px;padding:10px 12px"><div style="font-size:10.5px;color:var(--text-dim,#888);text-transform:uppercase;letter-spacing:.4px">${l}</div><div style="font-family:var(--serif);font-size:18px;font-weight:700;color:${c};margin-top:2px">${v}</div></div>`;
     const rowHtml=(it,mk)=>{ const venc=it.venc?it.venc.toLocaleDateString('pt-PT'):'—';
       const canPay=(it.devido>0)&&it.estado!=='Pago';
-      return `<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12.5px">${esc(it.label)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center;color:#777;font-size:11.5px">${venc}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;font-size:12.5px">${fmtMT(it.devido)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center">${estadoChip(it.estado)}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center">${canPay?`<button class="btn" style="padding:3px 9px;font-size:11px" onclick="printCanhoto('${cod}','${mk}')">${I.pdf}</button>`:'<span style="color:#ccc">—</span>'}</td></tr>`; };
+      return `<tr><td style="padding:8px 10px;border-bottom:1px solid var(--border-color,#eee);font-size:12.5px;color:var(--title-color,#0f172a);font-weight:600">${esc(it.label)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border-color,#eee);text-align:center;color:var(--text-dim,#777);font-size:11.5px">${venc}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border-color,#eee);text-align:right;font-size:12.5px;color:var(--title-color,#0f172a);font-weight:600">${fmtMT(it.devido)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border-color,#eee);text-align:center">${estadoChip(it.estado)}</td>
+        <td style="padding:8px 8px;border-bottom:1px solid var(--border-color,#eee);text-align:center">${canPay?`<button class="btn" style="padding:3px 9px;font-size:11px" onclick="printCanhoto('${cod}','${mk}')">${I.pdf}</button>`:'<span style="color:var(--text-dim,#ccc)">—</span>'}</td></tr>`; };
     const itemRows=s.items.filter(it=>it.tipo==='inscricao'?s.cfg.inscricao>0:true).map(it=>rowHtml(it, it.tipo==='inscricao'?'insc':it.mes)).join('');
     /* agrupado por extraId para nunca misturar atividades diferentes na mesma tabela (mesmo no caso raro de dados inconsistentes) */
     const exGroups={};
@@ -4021,27 +4021,27 @@ function openAlunoFicha(cod, tab){
     const exSections=Object.values(exGroups).map(g=>{
       const divida=g.items.filter(it=>it.estado!=='Pago').reduce((a,it)=>a+it.resto,0);
       const rows=g.items.map(it=>rowHtml(it,'ex:'+it.mes+':'+it.extraId)).join('');
-      return `<div style="font-weight:700;color:var(--navy);font-size:12.5px;margin-bottom:6px;display:flex;justify-content:space-between"><span>Atividade — ${esc(g.nome)}</span><span style="font-weight:400;color:#666">Em dívida: ${fmtMT(divida)}</span></div>
+      return `<div style="font-weight:700;color:var(--title-color,#0f172a);font-size:12.5px;margin-bottom:6px;display:flex;justify-content:space-between"><span>Atividade — ${esc(g.nome)}</span><span style="font-weight:400;color:var(--text-dim,#666)">Em dívida: ${fmtMT(divida)}</span></div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:14px"><tbody>${rows}</tbody></table>`;
     }).join('');
     const payRows=s.pays.slice().sort((x,y)=>new Date(y.data)-new Date(x.data)).slice(0,6).map(p=>{
       const desc=p.tipo==='mensalidade'?('Mensalidade '+(p.meses||[]).map(m=>MESES_PT[m-1].slice(0,3)).join(', ')):p.tipo==='inscricao'?'Inscrição':p.tipo==='multa'?'Multa':p.tipo==='extra'?((p.extraNome||'Atividade')+' '+(p.meses||[]).map(m=>MESES_PT[m-1].slice(0,3)).join(', ')):'Outro';
-      return `<tr><td style="padding:5px 10px;border-bottom:1px solid #eee;font-size:11.5px">${new Date(p.data).toLocaleDateString('pt-PT')}</td>
-        <td style="padding:5px 10px;border-bottom:1px solid #eee;font-size:11.5px">${esc(desc)}</td>
-        <td style="padding:5px 10px;border-bottom:1px solid #eee;text-align:right;font-size:11.5px;font-weight:600">${fmtMT(p.valor)}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center"><button class="btn" style="padding:3px 9px;font-size:11px" onclick="printRecibo('${cod}','${p.id}')">${I.pdf}</button></td></tr>`;
-    }).join('')||`<tr><td colspan="4" style="padding:12px;text-align:center;color:#999;font-size:12px">Sem entradas registadas.</td></tr>`;
+      return `<tr><td style="padding:7px 10px;border-bottom:1px solid var(--border-color,#eee);font-size:11.5px;color:var(--text-dim,#777)">${new Date(p.data).toLocaleDateString('pt-PT')}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid var(--border-color,#eee);font-size:11.5px;color:var(--title-color,#0f172a);font-weight:600">${esc(desc)}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid var(--border-color,#eee);text-align:right;font-size:11.5px;font-weight:600;color:var(--title-color,#0f172a)">${fmtMT(p.valor)}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid var(--border-color,#eee);text-align:center"><button class="btn" style="padding:3px 9px;font-size:11px" onclick="printRecibo('${cod}','${p.id}')">${I.pdf}</button></td></tr>`;
+    }).join('')||`<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--text-dim,#999);font-size:12px">Sem entradas registadas.</td></tr>`;
     openModal(`${modalHead}
       <div class="modal-b">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           ${tile('Pago',fmtMT(s.pagoTotal),'#0e7d52')}
-          ${tile('Em dívida',fmtMT(s.emDivida),s.emDivida>0?'#c2342f':'#26324a')}
-          ${tile('Multas',fmtMT(s.multasAcc),s.multasAcc>0?'#c2342f':'#26324a')}
+          ${tile('Em dívida',fmtMT(s.emDivida),s.emDivida>0?'#c2342f':'var(--title-color,#0f172a)')}
+          ${tile('Multas',fmtMT(s.multasAcc),s.multasAcc>0?'#c2342f':'var(--title-color,#0f172a)')}
         </div>
-        <div style="font-weight:700;color:var(--navy);font-size:12.5px;margin-bottom:6px">Plano anual — ${s.cfg.ano}</div>
+        <div style="font-weight:700;color:var(--title-color,#0f172a);font-size:12.5px;margin-bottom:6px">Plano anual — ${s.cfg.ano}</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:14px"><tbody>${itemRows}</tbody></table>
         ${exSections}
-        <div style="font-weight:700;color:var(--navy);font-size:12.5px;margin-bottom:6px">Últimas entradas</div>
+        <div style="font-weight:700;color:var(--title-color,#0f172a);font-size:12.5px;margin-bottom:6px">Últimas entradas</div>
         <table style="width:100%;border-collapse:collapse"><tbody>${payRows}</tbody></table>
       </div>
       <div class="modal-f"><button class="btn" onclick="closeModal()">Fechar</button><button class="btn pri" onclick="RETURN_TO_FICHA='${cod}';finOpenEntrada('${cod}')">${I.plus} Registar entrada</button></div>`, true);
@@ -6844,29 +6844,45 @@ function plDiCreate(key,tri,qIdx,num,tk,disc,tid){
 }
 
 function pdEditor(d){
-  const fld=(lab,f,val,w,ph)=>`<div style="display:flex;flex-direction:column;gap:3px;${w?'flex:'+w:''}"><label style="font-size:10px;font-weight:800;color:#888;text-transform:uppercase">${lab}</label><input value="${esc(val||'')}" placeholder="${ph||''}" onchange="pdField('${d.id}','${f}',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:13px"></div>`;
-  const area=(lab,f,val,rows)=>`<div style="display:flex;flex-direction:column;gap:3px;margin-top:8px"><label style="font-size:10px;font-weight:800;color:#888;text-transform:uppercase">${lab}</label><textarea rows="${rows||2}" onchange="pdField('${d.id}','${f}',this.value)" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px;resize:vertical">${esc(val||'')}</textarea></div>`;
+  const fld=(lab,f,val,w,ph)=>`<div style="display:flex;flex-direction:column;gap:3px;${w?'flex:'+w:''}"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">${lab}</label><input type="text" value="${esc(val||'')}" placeholder="${ph||''}" onchange="pdField('${d.id}','${f}',this.value)" style="padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text-main,#0f172a)"></div>`;
+  const area=(lab,f,val,rows)=>`<div style="display:flex;flex-direction:column;gap:3px;margin-top:8px"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">${lab}</label><textarea rows="${rows||2}" onchange="pdField('${d.id}','${f}',this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;resize:vertical;background:var(--surface,#fff);color:var(--text-main,#0f172a)">${esc(val||'')}</textarea></div>`;
 
-  const fcell=(i,f,ph)=>`<textarea oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onchange="pdFunc('${d.id}',${i},'${f}',this.value)" placeholder="${ph||''}" style="width:100%;border:none;background:transparent;font-size:12px;line-height:1.35;resize:vertical;min-height:34px;font-family:inherit;color:#26324a;padding:3px">${esc(d.func[i][f]||'')}</textarea>`;
-  const frows=d.func.map((fr,i)=>`<tr style="background:${i%2?'#fbfbfc':'#fff'}">
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:5px 7px;font-size:12px;font-weight:700;color:#26324a;min-width:150px">${esc(fr.fn)}<div style="margin-top:4px;font-weight:400"><input value="${esc(fr.tempo||'')}" onchange="pdFunc('${d.id}',${i},'tempo',this.value)" style="width:42px;border:1px solid var(--line);border-radius:6px;font-size:12px;padding:2px 4px;text-align:center"> min</div></td>
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:2px;min-width:160px">${fcell(i,'cont')}</td>
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:2px;min-width:170px">${fcell(i,'actP')}</td>
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:2px;min-width:150px">${fcell(i,'actA')}</td>
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:2px;min-width:120px">${fcell(i,'met')}</td>
-    <td style="border:1px solid #e4e8ee;vertical-align:top;padding:2px;min-width:120px">${fcell(i,'mat')}</td></tr>`).join('');
+  const fcell=(i,f,ph)=>`<textarea oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onchange="pdFunc('${d.id}',${i},'${f}',this.value)" placeholder="${ph||''}" style="width:100%;border:none;background:transparent;font-size:12px;line-height:1.35;resize:vertical;min-height:34px;font-family:inherit;color:var(--text-main,#26324a);padding:3px">${esc(d.func[i][f]||'')}</textarea>`;
+  const frows=d.func.map((fr,i)=>`<tr style="background:${i%2?'var(--surface-2,#fbfbfc)':'var(--card-bg,#fff)'}">
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:5px 7px;font-size:12px;font-weight:700;color:var(--title-color,#26324a);min-width:150px">${esc(fr.fn)}<div style="margin-top:4px;font-weight:400"><input type="number" value="${esc(fr.tempo||'')}" onchange="pdFunc('${d.id}',${i},'tempo',this.value)" style="width:48px;border:1px solid var(--border-color,var(--line));border-radius:6px;font-size:12px;padding:3px 6px;text-align:center;background:var(--surface,#fff);color:var(--text-main,#26324a)"> min</div></td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:160px">${fcell(i,'cont')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:170px">${fcell(i,'actP')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:150px">${fcell(i,'actA')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:120px">${fcell(i,'met')}</td>
+    <td style="border:1px solid var(--border-color,#e4e8ee);vertical-align:top;padding:2px;min-width:120px">${fcell(i,'mat')}</td></tr>`).join('');
 
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <button class="btn sm" onclick="plDiBack()">← Voltar às lições</button>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sm em" onclick="pdPrint('${d.id}')">${I.pdf||''} Imprimir</button>
-        <button class="btn sm" onclick="pdDel('${d.id}')" style="color:#c2342f">Eliminar</button>
-      </div></div>
+  return `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <button class="btn sm" onclick="plDiBack()">← Voltar às lições</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="btn sm em" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;font-weight:700;box-shadow:0 3px 10px rgba(124,58,237,0.25)" onclick="pdGenerateIA('${d.id}')">⚡ Gerar Plano com IA</button>
+          <button class="btn sm" onclick="pdPromptModal('${d.id}')">🤖 Prompt IA</button>
+          <button class="btn sm em" onclick="pdPrint('${d.id}')">${I.pdf||''} Imprimir</button>
+          <button class="btn sm" onclick="pdDel('${d.id}')" style="color:#c2342f">Eliminar</button>
+        </div>
+      </div>
+    </div>
     <div class="card" style="padding:16px 18px">
-      <div style="font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:700;text-align:center;color:#26324a;margin-bottom:2px">Plano de Aula</div>
-      <div style="text-align:center;font-size:12px;color:#888;margin-bottom:14px">Escola Pré-Universitária Sagrada Família – Maxixe</div>
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,0.12),rgba(37,99,235,0.12));border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">⚡</span>
+          <div>
+            <div style="font-weight:800;font-size:13px;color:var(--title-color)">Assistente Pedagógico IA</div>
+            <div style="font-size:11.5px;color:var(--text-dim)">Preencha automaticamente os Objectivos, Funções Didácticas, Quadro e TPC em 1 toque.</div>
+          </div>
+        </div>
+        <button class="btn sm em" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;font-weight:700;padding:8px 14px;border-radius:9px;white-space:nowrap;box-shadow:0 3px 10px rgba(124,58,237,0.3)" onclick="pdGenerateIA('${d.id}')">⚡ Preencher com IA</button>
+      </div>
+
+      <div style="font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:700;text-align:center;color:var(--title-color,#26324a);margin-bottom:2px">Plano de Aula</div>
+      <div style="text-align:center;font-size:12px;color:var(--text-dim,#888);margin-bottom:14px">Escola Pré-Universitária Sagrada Família – Maxixe</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div style="display:flex;flex-direction:column;gap:3px;flex:2"><label style="font-size:10px;font-weight:800;color:#888;text-transform:uppercase">Data</label><input type="date" value="${esc(d.data||'')}" onchange="pdField('${d.id}','data',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:13px"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:2"><label style="font-size:10px;font-weight:800;color:var(--text-dim,#888);text-transform:uppercase">Data</label><input type="date" value="${esc(d.data||'')}" onchange="pdField('${d.id}','data',this.value)" style="padding:8px 10px;border:1px solid var(--border-color,var(--line));border-radius:8px;font-size:13px;background:var(--surface,#fff);color:var(--text-main,#0f172a)"></div>
         ${fld('Classe','classe',d.classe,'1')}${fld('Turma','turma',d.turma,'1')}
         ${fld('Duração (min)','duracao',d.duracao,'1')}${fld('Nº de Alunos','nAlunos',d.nAlunos,'1')}
       </div>
@@ -6881,15 +6897,15 @@ function pdEditor(d){
       ${area('Objectivos específicos','obj',d.obj,3)}
       ${area('Resultados de Aprendizagem','res',d.res,2)}
 
-      <div style="overflow-x:auto;border:1px solid #e4e8ee;border-radius:8px;margin-top:14px">
+      <div style="overflow-x:auto;border:1px solid var(--border-color,#e4e8ee);border-radius:8px;margin-top:14px">
         <table style="border-collapse:collapse;width:100%;min-width:920px">
           <thead><tr>
-            <th rowspan="1" style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Funções Didácticas e Tempo</th>
-            <th style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Conteúdos</th>
-            <th style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Act. Professor/a</th>
-            <th style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Act. Alunos</th>
-            <th style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Método/Técnica</th>
-            <th style="background:#f3f5f8;border:1px solid #e4e8ee;padding:7px;font-size:11px;font-weight:800;color:#445;text-align:left">Material Didáctico</th>
+            <th rowspan="1" style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Funções Didácticas e Tempo</th>
+            <th style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Conteúdos</th>
+            <th style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Act. Professor/a</th>
+            <th style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Act. Alunos</th>
+            <th style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Método/Técnica</th>
+            <th style="background:var(--surface-2,#f3f5f8);border:1px solid var(--border-color,#e4e8ee);padding:7px;font-size:11px;font-weight:800;color:var(--title-color,#445);text-align:left">Material Didáctico</th>
           </tr></thead><tbody>${frows}</tbody>
         </table>
       </div>
@@ -6899,7 +6915,334 @@ function pdEditor(d){
     <div class="help">${I.info}<div>Guardado automaticamente. O <b>tema</b> deste plano aparece sozinho no <b>Diário de Aula</b> na data da aula, para esta turma e disciplina. A tabela das quatro funções é toda editável.</div></div>`;
 }
 
-/* helper "Elaborar com IA" removido temporariamente — rever mais tarde */
+/* ============================================================
+   ASSISTENTE PEDAGÓGICO DE IA (Plano Quinzenal & Plano Diário)
+   ============================================================ */
+
+function pdGenerateIA(id) {
+  const d = pdById(id);
+  if (!d) return;
+
+  const tema = (d.tema || 'Conteúdo Programático').trim();
+  const disc = d.disc || 'Disciplina';
+  const classe = d.classe || '11ª';
+  const ut = d.ut || 'Unidade Temática';
+  const dur = parseInt(d.duracao || '45', 10);
+
+  const is90 = dur >= 80;
+  const tIntro = is90 ? '10' : '5';
+  const tMed = is90 ? '50' : '25';
+  const tDom = is90 ? '20' : '10';
+  const tCtrl = is90 ? '10' : '5';
+
+  d.tipo = d.tipo || 'Desenvolvimento';
+  
+  if (!d.obj || d.obj.length < 15) {
+    d.obj = `• Definir e explicar os conceitos fundamentais de ${tema};\n• Analisar as características essenciais e a importância de ${tema} no contexto de ${disc};\n• Resolver exercícios práticos e aplicar os conhecimentos adquiridos em situações reais.`;
+  }
+
+  if (!d.res || d.res.length < 15) {
+    d.res = `O aluno compreende a estrutura e lógica de ${tema}, demonstrando capacidade de análise crítica, autonomia na resolução de problemas e rigor científico.`;
+  }
+
+  d.func = [
+    {
+      fn: 'Introdução e Motivação',
+      tempo: tIntro,
+      cont: `Saudação, controlo de presenças, revisão da lição anterior e apresentação do tema: ${tema}.`,
+      actP: `Saúda a turma com entusiasmo, faz a chamada, orienta a revisão da aula anterior com perguntas instigantes e escreve a data e o tema no quadro.`,
+      actA: `Respondem à saudação, participam na recapitulação oral da aula anterior, anotam a data e o tema nos cadernos.`,
+      met: `Elaboração Conjunta / Expositivo-dialogado`,
+      mat: `Quadro, giz, apagador e livro de turma`
+    },
+    {
+      fn: 'Mediação e Assimilação',
+      tempo: tMed,
+      cont: `Exposição dialogada e explicativa sobre ${tema}; análise dos conceitos centrais, regras e exemplos práticos.`,
+      actP: `Apresenta os conteúdos essenciais de ${tema}, esquematiza os pontos-chave no quadro, coloca questões para testar a compreensão e esclarece dúvidas.`,
+      actA: `Escutam com atenção, registam o esquematismo do quadro nos cadernos, colocam questões de dúvida e participam na discussão dos exemplos.`,
+      met: `Expositivo-explicativo e Trabalho em Grupos`,
+      mat: `Manual do aluno, quadro, giz e material de apoio`
+    },
+    {
+      fn: 'Domínio e Consolidação',
+      tempo: tDom,
+      cont: `Resolução de exercícios práticos de consolidação e aplicação directa sobre ${tema}.`,
+      actP: `Propõe 2 a 3 exercícios práticos, circula pela sala a prestar apoio aos alunos com dúvidas e orienta a correcção no quadro.`,
+      actA: `Resolvem os exercícios nos cadernos individualmente ou em pares, apresentam as respostas no quadro e corrigem eventuais erros.`,
+      met: `Trabalho Independente / Resolução de Problemas`,
+      mat: `Caderno de exercícios, quadro e giz`
+    },
+    {
+      fn: 'Controlo e Avaliação',
+      tempo: tCtrl,
+      cont: `Síntese geral da aula, avaliação sumária do nível de assimilação e orientação do TPC.`,
+      actP: `Faz o resumo dos aspectos principais da lição, avalia a participação geral da turma e dita o Trabalho Para Casa (TPC).`,
+      actA: `Participam na síntese verbal da lição, registam o TPC nos cadernos e solicitam esclarecimentos sobre os exercícios de casa.`,
+      met: `Elaboração Conjunta`,
+      mat: `Quadro e caderno de apontamentos`
+    }
+  ];
+
+  if (!d.quadro) {
+    d.quadro = `ESCOLA PRÉ-UNIVERSITÁRIA SAGRADA FAMÍLIA - MAXIXE\nData: ${iso2dmy(d.data)||'___/___/2026'} | Lição nº ${d.licao||'--'} | Turma: ${d.turma||''}\nTema: ${tema}\n\n1. SÍNTESE DOS CONCEITOS:\n- Definição central de ${tema}.\n- Principais características e propriedades.\n\n2. EXERCÍCIO DE APLICAÇÃO:\n- Exercício 1: Resolver e aplicar as regras estudadas.\n- Resolução orientada no quadro.`;
+  }
+
+  if (!d.tpc) {
+    d.tpc = `Ler o capítulo sobre "${tema}" no manual do aluno e resolver os exercícios de consolidação 1 e 2 no caderno.`;
+  }
+
+  d.ts = Date.now();
+  persist();
+  if (typeof showToast === 'function') showToast('✨ Plano de aula preenchido com sucesso pela IA!');
+  render();
+}
+
+function pdPromptModal(id) {
+  const d = pdById(id);
+  if (!d) return;
+
+  const promptText = `Atua como um Especialista Pedagógico e Metodólogo do Ensino Secundário Geral em Moçambique.
+Elabora um Plano de Aula criativo e detalhado para a seguinte lição:
+
+- Disciplina: ${d.disc}
+- Classe: ${d.classe} (Turma ${d.turma})
+- Unidade Temática: ${d.ut || 'Geral'}
+- Tema da Lição: ${d.tema}
+- Duração: ${d.duracao || '45'} minutos
+
+Por favor, fornece o conteúdo estruturado com as 4 Funções Didácticas (Introdução e Motivação, Mediação e Assimilação, Domínio e Consolidação, Controlo e Avaliação), incluindo:
+1. Objectivos Específicos claros (usando a Tassonomia de Bloom).
+2. Resultados de Aprendizagem esperados.
+3. Actividades detalhadas do Professor e dos Alunos para cada função didáctica.
+4. Métodos pedagógicos e materiais didácticos recomendados no contexto escolar de Moçambique.
+5. Esboço do Quadro Mural (resumo e exercícios).
+6. Trabalho para Casa (TPC).`;
+
+  openModal(`
+    <div class="modal-h">
+      <h3>🤖 Prompt IA para ChatGPT / Claude</h3>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+        Copia este prompt optimizado e cola no ChatGPT, Claude ou DeepSeek para gerar abordagens pedagógicas altamente criativas e personalizadas:
+      </p>
+      <textarea id="promptBox" readonly style="width:100%;height:220px;padding:10px;font-family:var(--mono);font-size:12px;border:1px solid var(--border-color);border-radius:10px;background:var(--surface-2);color:var(--text-main);resize:none">${esc(promptText)}</textarea>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn em" onclick="navigator.clipboard.writeText($('#promptBox').value); showToast('📋 Prompt copiado com sucesso!'); closeModal();">📋 Copiar Prompt</button>
+    </div>
+  `);
+}
+
+function getCreativePedagogy(disc, cont, rIndex) {
+  disc = String(disc || '').toLowerCase();
+  cont = String(cont || '').trim();
+
+  const isMathOrExact = /matem|físic|químic|informát|estatíst/.test(disc);
+  const isLang = /portugu|ingl|franc|língu|literat/.test(disc);
+  const isSocial = /histór|geogr|filosof|sociol|cidadan|evoc/.test(disc);
+  const isBioOrNat = /biolog|ciênc|natur|agro/.test(disc);
+
+  const hash = (Array.from(cont).reduce((a, c) => a + c.charCodeAt(0), 0) + (rIndex || 0)) % 4;
+
+  let res = '';
+  if (isMathOrExact) {
+    const opts = [
+      `O aluno equaciona com clareza e resolve com precisão exercícios práticos sobre ${cont}, demonstrando raciocínio lógico rigoroso.`,
+      `Demonstra capacidade analítica e aplicação autónoma dos procedimentos algébricos/numéricos relativos a ${cont}.`,
+      `Aplica com eficiência as fórmulas e princípios fundamentais de ${cont} na resolução de situações-problema do quotidiano.`,
+      `Interpreta modelos matemáticos/científicos e justifica os passos resolutivos ao abordar temas sobre ${cont}.`
+    ];
+    res = opts[hash];
+  } else if (isLang) {
+    const opts = [
+      `O aluno interpreta criticamente a estrutura e o sentido de ${cont}, utilizando vocabulário técnico e adequado em produções textuais e orais.`,
+      `Mobiliza recursos linguístico-comunicativos com correcção gramatical ao discutir e sintetizar tópicos sobre ${cont}.`,
+      `Demonstra competência de leitura analítica, identificando as ideias centrais e a intenção comunicativa em ${cont}.`,
+      `Produz enunciados bem articulados e coerentes, aplicando as regras linguísticas estudadas em ${cont}.`
+    ];
+    res = opts[hash];
+  } else if (isSocial) {
+    const opts = [
+      `O aluno contextualiza criticamente as causas, dinâmicas e implicações de ${cont}, relacionando-as com a realidade socio-histórica nacional.`,
+      `Analisa múltiplos factores socioespaciais relativos a ${cont}, argumentando com fundamentação teórica e consciência cívica.`,
+      `Compreende a relevância temporal/espacial de ${cont} e o seu impacto no desenvolvimento da comunidade.`,
+      `Identifica e compara as visões historiográficas/geográficas fundamentais associadas a ${cont}.`
+    ];
+    res = opts[hash];
+  } else {
+    const opts = [
+      `O aluno explica a dinâmica e as interacções dos processos científicos inerentes a ${cont}, correlacionando a teoria com a observação prática.`,
+      `Identifica com exactidão as estruturas e funções essenciais de ${cont}, reconhecendo a sua importância para a saúde e ecossistema.`,
+      `Aplica conceitos científicos na interpretação de fenómenos naturais e experiências referentes a ${cont}.`,
+      `Desenvolve hábitos de investigação científica e atitude reflexiva ao analisar os princípios de ${cont}.`
+    ];
+    res = opts[hash];
+  }
+
+  let met = '';
+  if (isMathOrExact) {
+    const opts = [
+      'Método Expositivo-Dialogado, Resolução guiada de problemas e Trabalho individual/par',
+      'Elaboração conjunta, Demonstração no quadro e Exercícios práticos de consolidação',
+      'Método Heurístico, Resolução autónoma de fichas e Correção participativa',
+      'Trabalho em pequenos grupos, Discussão de estratégias e Sintetização de fórmulas'
+    ];
+    met = opts[hash];
+  } else if (isSocial) {
+    const opts = [
+      'Análise documental/textual, Debate orientado e Elaboração conjunta',
+      'Expositivo-Dialogado, Estudo de caso e Discussão participativa em grande grupo',
+      'Método de Investigação guiada, Leitura crítica e Síntese concisa no quadro',
+      'Trabalho em equipa, Apresentação de conclusões e Reflexão cívica'
+    ];
+    met = opts[hash];
+  } else if (isLang) {
+    const opts = [
+      'Leitura expressiva/analítica, Elaboração conjunta e Produção escrita orientada',
+      'Expositivo-Dialogado, Trabalho em pares e Exercícios de consolidação gramatical',
+      'Método Comunicativo, Análise de texto modelo e Apresentação oral',
+      'Leitura guiada, Discussão sintáctica e Trabalho de reflexão linguística'
+    ];
+    met = opts[hash];
+  } else {
+    const opts = [
+      'Expositivo-Dialogado, Observação/Demonstração prática e Trabalho em grupo',
+      'Elaboração conjunta, Experimentação/Simulação e Discussão de resultados',
+      'Método Investigativo, Análise de esquemas gráficos e Ficha de trabalho',
+      'Demonstração visual, Diálogo orientador e Síntese dos fenómenos estudados'
+    ];
+    met = opts[hash];
+  }
+
+  let mat = '';
+  if (isMathOrExact) {
+    const opts = [
+      'Manual do aluno, quadro, giz/marcadores, régua/esquadro e ficha de exercícios',
+      'Manual escolar, instrumentos de geometria, formulário de apoio e marcadores',
+      'Quadro, giz de cores, colecção de problemas seleccionados e fichas de consolidação',
+      'Manual do aluno, calculadora/tabela de consulta, quadro e guia de tarefas'
+    ];
+    mat = opts[hash];
+  } else if (isSocial) {
+    const opts = [
+      'Manual do aluno, mapas/cartazes temáticos, fontes documentais e quadro',
+      'Manual escolar, gravuras ilustrativas, fichas de leitura e quadro',
+      'Textos de apoio históricos/geográficos, esquemas no quadro e fichas temáticas',
+      'Manual do aluno, Atlas/documentos de arquivo, quadro e questionário guiado'
+    ];
+    mat = opts[hash];
+  } else if (isLang) {
+    const opts = [
+      'Manual do aluno, dicionários, fichas de leitura/gramática e quadro',
+      'Textos literários/informativos seleccionados, cartaz de apoio e quadro',
+      'Manual escolar, fichas de produção escrita, excertos textuais e quadro',
+      'Manual do aluno, quadro, marcadores e grelha de análise textual'
+    ];
+    mat = opts[hash];
+  } else {
+    const opts = [
+      'Manual do aluno, esquemas/cartazes ilustrativos e materiais do meio local',
+      'Manual escolar, quadro, giz e lâminas/modelos explicativos',
+      'Fichas de observação científica, manual do aluno, ilustrações e quadro',
+      'Manual do aluno, amostras/objectos reais do meio natural e quadro'
+    ];
+    mat = opts[hash];
+  }
+
+  return { res, met, mat };
+}
+
+function quinzGenerateIA(id) {
+  const q = quinzById(id);
+  if (!q) return;
+
+  (q.rows || []).forEach((r, idx) => {
+    const cont = (r.cont || '').trim();
+    if (!cont) return;
+
+    // Preserva rigorosamente Objectivos Específicos se já existirem
+    if (!r.obj || r.obj.length < 10) {
+      r.obj = `• Compreender a essência e estrutura de ${cont.slice(0, 60)};\n• Analisar as propriedades e implicações fundamentais;\n• Aplicar os conhecimentos em exercícios e tarefas práticas.`;
+    }
+
+    // Rielabora criativamente os restantes boxes pedagógicos
+    const ped = getCreativePedagogy(q.disc, cont, idx);
+    r.res = ped.res;
+    r.met = ped.met;
+    r.mat = ped.mat;
+  });
+
+  q.ts = Date.now();
+  persist();
+  if (typeof showToast === 'function') showToast('✨ Plano Quinzenal rielaborado com linguagem pedagógica criativa!');
+  render();
+}
+
+function quinzRowEnrichIA(qId, rId) {
+  const q = quinzById(qId);
+  if (!q) return;
+  const r = (q.rows || []).find(x => x.id === rId);
+  if (!r) return;
+  const cont = (r.cont || '').trim();
+  if (!cont) {
+    if (typeof showToast === 'function') showToast('⚠️ Preencha primeiro o Conteúdo da lição!');
+    return;
+  }
+
+  if (!r.obj || r.obj.length < 10) {
+    r.obj = `• Compreender a essência de ${cont.slice(0, 60)};\n• Analisar as propriedades e implicações fundamentais;\n• Aplicar em exercícios práticos.`;
+  }
+
+  const ped = getCreativePedagogy(q.disc, cont, Math.floor(Math.random() * 4));
+  r.res = ped.res;
+  r.met = ped.met;
+  r.mat = ped.mat;
+
+  q.ts = Date.now();
+  persist();
+  if (typeof showToast === 'function') showToast('✨ Lição enriquecida com IA!');
+  render();
+}
+
+function quinzPromptModal(id) {
+  const q = quinzById(id);
+  if (!q) return;
+
+  const promptText = `Atua como Metodólogo de Educação em Moçambique.
+Elabora um Plano Quinzenal de Ensino completo para a disciplina de ${q.disc} (${q.classe} Classe):
+
+- Período: ${q.periodoIni} a ${q.periodoFim}
+- Quinzena: ${q.qIdx + 1}ª Quinzena
+- Conteúdos a cobrir:
+${(q.rows || []).map(r => `  - Lição ${r.lic}: ${r.cont}`).join('\n')}
+
+Estrutura cada lição com:
+1. Objectivos Específicos
+2. Resultados de Aprendizagem
+3. Métodos e Técnicas de Ensino recomendados
+4. Meios / Material Didáctico necessário.`;
+
+  openModal(`
+    <div class="modal-h">
+      <h3>🤖 Prompt IA — Plano Quinzenal</h3>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+        Copia este prompt optimizado para gerar o Plano Quinzenal completo em assistentes de IA:
+      </p>
+      <textarea id="promptBoxQ" readonly style="width:100%;height:220px;padding:10px;font-family:var(--mono);font-size:12px;border:1px solid var(--border-color);border-radius:10px;background:var(--surface-2);color:var(--text-main);resize:none">${esc(promptText)}</textarea>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn em" onclick="navigator.clipboard.writeText($('#promptBoxQ').value); showToast('📋 Prompt copiado com sucesso!'); closeModal();">📋 Copiar Prompt</button>
+    </div>
+  `);
+}
 
 /* —— Impressão fiel ao modelo (landscape, Times New Roman) —— */
 function pdPrint(id){
@@ -7086,6 +7429,7 @@ function plRenderQuinzenal(key,tid,tk,disc,triObj,cls){
   const th=QZ_COLS.map(c=>`<th style="min-width:${c[2]}px;padding:8px 7px;text-align:left;font-size:11px;font-weight:800;color:#445;background:#f3f5f8;border:1px solid #e4e8ee">${c[1]}</th>`).join('');
   const rows=q.rows.map((r,i)=>`<tr style="background:${i%2?'#fbfbfc':'#fff'}">${QZ_COLS.map(c=>cell(r,c[0],c[2])).join('')}
     <td style="border:1px solid #e4e8ee;vertical-align:top;padding:3px;white-space:nowrap;text-align:center">
+      <button title="Enriquecer esta lição com IA (Competências, Métodos e Meios)" onclick="quinzRowEnrichIA('${q.id}','${r.id}')" style="border:none;background:none;cursor:pointer;color:#7c3aed;font-weight:bold;font-size:13px">✨</button>
       <button title="Subir" onclick="quinzMoveRow('${q.id}','${r.id}',-1)" style="border:none;background:none;cursor:pointer;color:#aaa">▲</button>
       <button title="Descer" onclick="quinzMoveRow('${q.id}','${r.id}',1)" style="border:none;background:none;cursor:pointer;color:#aaa">▼</button>
       <button title="Eliminar" onclick="quinzDelRow('${q.id}','${r.id}')" style="border:none;background:none;cursor:pointer;color:#c2342f">✕</button>
@@ -7100,6 +7444,8 @@ function plRenderQuinzenal(key,tid,tk,disc,triObj,cls){
         <div style="font-size:12px;color:#888;margin-top:2px">${esc(classe)} · ${esc(triObj.nome)} · ${PLUI.qIdx+1}ª Quinzena</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm em" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;font-weight:700" onclick="quinzGenerateIA('${q.id}')">⚡ Preencher Quinzena com IA</button>
+        <button class="btn sm" onclick="quinzPromptModal('${q.id}')">🤖 Prompt IA</button>
         <button class="btn sm" onclick="quinzReset('${q.id}','${esc(classe)}','${esc(disc)}')">↺ Repor do analítico</button>
         <button class="btn sm em" onclick="quinzPrint('${q.id}')">${I.pdf||''} Imprimir</button>
       </div>
