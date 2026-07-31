@@ -46,7 +46,7 @@
       <div><div class="bt">ESAGRADA</div><div class="bs">Plataforma digital</div></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot">Escola Pré-Universitária<br>Sagrada Família · Maxixe<br><span style="opacity:.6">v3.5.4 · 31/07/2026 · dados locais</span></div>
+    <div class="foot">Escola Pré-Universitária<br>Sagrada Família · Maxixe<br><span style="opacity:.6">v3.5.5 · 31/07/2026 · dados locais</span></div>
   </aside>
   <header class="topbar">
     <button class="navtoggle" id="navToggle" aria-label="Abrir menu" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
@@ -75,13 +75,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="./qrcode.js"></script>
-  <script src="./app.js?v=3.5.4"></script>
+  <script src="./app.js?v=3.5.5"></script>
   <script type="module">
     import { registerSW } from 'virtual:pwa-register';
     const updateSW = registerSW({
       immediate: true,
       onNeedRefresh() {
-        if (confirm('Nova versão v3.5.4 disponível! Atualizar agora?')) {
+        if (confirm('Nova versão v3.5.5 disponível! Atualizar agora?')) {
           updateSW(true);
         }
       }
