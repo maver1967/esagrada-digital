@@ -10014,8 +10014,8 @@ VIEWS.salaVirtual = function(r) {
   const discs = (curCls && curCls.subjects) ? curCls.subjects : (db.subjects || []).map(s => s.name);
   if(!SVUI.disc && discs.length > 0) SVUI.disc = discs[0];
 
-  const role = currentUser ? (currentUser.role || 'ADMIN') : 'ADMIN';
-  const isTeacherOrAdmin = (role === 'ADMIN' || role === 'DIRECAO' || role === 'PROFESSOR');
+  const activeRole = String(typeof PREVIEW_ROLE !== 'undefined' ? PREVIEW_ROLE : (typeof AUTH_USER !== 'undefined' && AUTH_USER ? AUTH_USER.role : 'direcao')).toLowerCase();
+  const isTeacherOrAdmin = ['admin', 'direcao', 'diretor', 'professor'].includes(activeRole);
 
   // Filter materials & tasks
   const materiais = (db.salaMateriais || []).filter(m => String(m.clsId) === String(SVUI.cls) && (!SVUI.disc || m.disc === SVUI.disc) && (!SVUI.tri || m.tri === SVUI.tri));
@@ -10515,7 +10515,7 @@ window.svGuardarComentario = function(itemId, itemType) {
   DB.salaComentarios.push({
     id: 'com_' + Date.now(),
     itemId: itemId,
-    autor: currentUser ? (currentUser.nome || currentUser.user) : 'Utilizador',
+    autor: (typeof AUTH_USER !== 'undefined' && AUTH_USER) ? (AUTH_USER.name || AUTH_USER.user || AUTH_USER.nome) : 'Docente',
     texto: txt,
     data: new Date().toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})
   });
