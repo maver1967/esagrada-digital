@@ -639,5 +639,38 @@ table.tt td.cell:hover {
   }
 }
 
+.input-with-icon {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 12px !important;
+  padding: 0 14px !important;
+  box-sizing: border-box !important;
+}
+
+.input-with-icon .icon {
+  position: static !important;
+  transform: none !important;
+  font-size: 16px !important;
+  margin-right: 12px !important;
+  flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+
+.input-with-icon input {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 12px 0 !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+}
+
 
 

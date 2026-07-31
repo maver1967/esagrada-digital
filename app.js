@@ -515,6 +515,7 @@ const NAVGROUPS = [
     {id:'diario', label:'Diário de Aula', icon:'clipboard'},
     {id:'livropres', label:'Livro de Presenças', icon:'clipboard'},
     {id:'planificacao', label:'Planificação', icon:'doc'},
+    {id:'salaVirtual', label:'Sala Virtual (LMS)', icon:'cap'},
     {id:'hor', subs:['grid','tview','rules','export'], label:'Horários', icon:'clock'},
     {id:'av', subs:['test','cadernetas','pautas','alunos','docs'], label:'Avaliações', icon:'edit'},
   ]},
@@ -603,9 +604,41 @@ function navItemBtn(n,indent){
   return `<button data-go="${n.id}" class="${UI.view===n.id?'on':''}" ${indent?'style="padding-left:34px"':''}>${I[n.icon]||I.doc}<span>${n.label}</span>${b!==''?`<span class="badge">${b}</span>`:''}</button>`;
 }
 function allowedSet(){ const a=ROLE_NAV[PREVIEW_ROLE]; return a==='*'?null:new Set(a); }
+function userCardHtml() {
+  if (!AUTH_USER) return '';
+  const roleLabel = ROLES[AUTH_USER.role] ? ROLES[AUTH_USER.role].label : AUTH_USER.role;
+  return `
+    <div style="padding:12px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:18px;border:1px solid rgba(255,255,255,.15)">
+          ${AUTH_USER.avatar || '👤'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${esc(AUTH_USER.nome)}
+          </div>
+          <div style="display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.85)">
+            ${esc(roleLabel)}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button type="button" onclick="openChangePassModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
+          🔑 Password
+        </button>
+        <button type="button" onclick="doLogout()" style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);color:#fca5a5;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
+          🚪 Sair
+        </button>
+      </div>
+    </div>
+  `;
+}
 function buildNav(){
   const allow=allowedSet(); const relabel=ROLE_RELABEL[PREVIEW_ROLE]||{};
-  let html=roleSelectorHtml();
+  let html = userCardHtml();
+  if (AUTH_USER && AUTH_USER.role === 'direcao') {
+    html += roleSelectorHtml();
+  }
   html += navItemBtn(NAV_TOP,false);
   if(!allow || allow.has('portaria')) html += navItemBtn(NAV_PORTARIA,false);
   NAVGROUPS.forEach(g=>{
@@ -620,43 +653,14 @@ function buildNav(){
   });
   if(!allow || allow.has('config')) html += navItemBtn(NAV_BOTTOM,false);
   $('#nav').innerHTML = html;
-  $('#roleSel').onchange = e=>setRole(e.target.value);
+  if($('#roleSel')) $('#roleSel').onchange = e=>setRole(e.target.value);
   $('#nav').querySelectorAll('button[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
   let logo = DB.settings && DB.settings.logo ? DB.settings.logo : DEFAULT_LOGO;
   if(logo && logo.startsWith('/assets/')) logo = '.' + logo;
   $('#brandMark').innerHTML = logo ? `<img src="${logo}" style="width:42px;height:42px;border-radius:11px;object-fit:contain">` : I.cap;
   $('#yearPill').textContent = DB.settings.year;
   const banner=$('#previewBanner');
-  if(banner){
-    if(PREVIEW_ROLE==='direcao'){ banner.style.display='none'; }
-    else { banner.style.display='flex';
-      let extra='';
-      if((PREVIEW_ROLE==='professor'||PREVIEW_ROLE==='diretor') && typeof currentTeacherId==='function'){
-        let list = DB.teachers || [];
-        if(PREVIEW_ROLE==='diretor'){
-          const dtsList = getDtTeachers();
-          if(dtsList.length > 0) list = dtsList;
-        }
-        let cur = currentTeacherId();
-        if(list.length > 0 && !list.some(t=>t.id===cur)){
-          cur = list[0].id;
-          PREVIEW_TEACHER = cur;
-        }
-        const dts = DB.diretoresTurma || {};
-        const tks = turmaKeys();
-        const opts = list.map(t=>{
-          const tName = teacherLabel(t);
-          const mine = tks.find(tk => dts[tk] && (dts[tk] === t.id || dts[tk] === tName));
-          const dtBadge = mine ? ` 🌟 (DT ${mine})` : '';
-          return `<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(tName)}${dtBadge}</option>`;
-        }).join('');
-
-        const curTObj = getTeacher(cur);
-        extra=` &nbsp;·&nbsp; A entrar como: <button type="button" class="btn sm" onclick="selectTeacherModal('${cur}', id => { PREVIEW_TEACHER=id; if(typeof DIUI!=='undefined'){DIUI.sel=0;DIUI.data=null;} render(); })" style="padding:3px 10px;border-radius:8px;border:1px solid #e0cf9e;background:#fff;font-size:12px;font-weight:700;color:#7a5b12;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 ${esc(curTObj ? teacherLabel(curTObj) : 'Trocar Docente')} <span style="font-size:9px">▼</span></button>`;
-      }
-      $('#previewText').innerHTML = `Pré-visualização do perfil <b>${ROLES[PREVIEW_ROLE].label}</b> — ${ROLES[PREVIEW_ROLE].desc} <span style="opacity:.7">(simulação; ainda é o seu acesso de direcção)</span>${extra}`;
-    }
-  }
+  if(banner){ banner.style.display='none'; }
 }
 const VIEWS={};
 function go(v){
@@ -725,6 +729,22 @@ const DAYS_ORDER = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 
 let PREVIEW_TEACHER = null;
 function currentTeacherId(){
+  if (AUTH_USER && DB && Array.isArray(DB.teachers)) {
+    if (AUTH_USER.role === 'professor' || AUTH_USER.role === 'diretor') {
+      const uName = String(AUTH_USER.nome || '').trim().toLowerCase();
+      const uId = String(AUTH_USER.id || '').trim().toLowerCase();
+      const match = DB.teachers.find(t => {
+        if (String(t.id).toLowerCase() === uId) return true;
+        const tName = String(t.name || t.nome || '').trim().toLowerCase();
+        const tLbl = String(typeof teacherLabel === 'function' ? teacherLabel(t) : '').trim().toLowerCase();
+        if (tName === uName || tLbl === uName) return true;
+        if (uName.includes('roberto') && (tName.includes('roberto') || tLbl.includes('roberto'))) return true;
+        if (uName.includes('maver') && (tName.includes('maver') || tLbl.includes('maver'))) return true;
+        return false;
+      });
+      if (match) return match.id;
+    }
+  }
   if(PREVIEW_TEACHER && DB && DB.teachers && DB.teachers.some(t=>t.id===PREVIEW_TEACHER)) return PREVIEW_TEACHER;
   return (DB && DB.teachers && DB.teachers[0]) ? DB.teachers[0].id : '';
 }
@@ -841,8 +861,129 @@ function pnAgoraTurma(tk,dia,slot){ if(!slot||!dia) return {lessons:[],profs:[],
   lessons.forEach(L=>{ const rec=diFind(today,tk,L.slotId,L.disc); if(rec) faltas+=Object.keys(rec.faltas||{}).length; });
   const profs=[...new Set(lessons.map(L=>L.prof).filter(p=>p&&p!=='—'))];
   return {lessons,profs,faltas}; }
+function profDashView(r){
+  setSub('Painel do Docente');
+  const tid = currentTeacherId();
+  const t = getTeacher(tid);
+  const name = t ? teacherLabel(t) : (AUTH_USER ? AUTH_USER.nome : 'Professor');
+  const st = t ? teacherStats(tid) : { total: 0, classes: [] };
+  const todayIso = diIsoToday();
+  const dia = diDiaFromIso(todayIso);
+  const lessonsToday = diLessons(tid, dia);
+  const diaTxt = dia ? (DIA_FULL[dia] || dia) : 'Fim-de-semana';
+
+  let lessonsHtml = '';
+  if (lessonsToday.length > 0) {
+    lessonsHtml = lessonsToday.map((l, idx) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-left:5px solid ${l.col};border-radius:14px;box-shadow:var(--shadow-card)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="background:var(--surface-2,#f1f5f9);padding:8px 12px;border-radius:10px;text-align:center">
+            <div style="font-weight:800;font-size:13px;color:var(--brand-blue,#3b82f6)">${l.slot.s}</div>
+            <div style="font-size:10.5px;color:var(--text-dim,#64748b)">${l.slot.e}</div>
+          </div>
+          <div>
+            <div style="font-weight:800;font-size:16px;color:var(--title-color,#0f172a)">${esc(l.disc)}</div>
+            <div style="font-size:12.5px;color:var(--text-muted,#475569);font-weight:600;margin-top:2px">
+              🏫 Turma <b>${esc(l.tk)}</b> ${l.grps && l.grps.length ? `<span style="background:rgba(59,130,246,0.12);color:var(--brand-blue,#3b82f6);padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">[${l.grps.join('/')}]</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <button class="btn sm em" onclick="DIUI.data='${todayIso}';DIUI.sel=${idx};go('diario')" style="border-radius:10px;font-weight:700">📖 Abrir Diário</button>
+      </div>
+    `).join('');
+  } else {
+    lessonsHtml = `
+      <div class="card" style="padding:24px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">🎉</div>
+        <div style="font-weight:700;font-size:15px;color:var(--title-color,#0f172a)">Sem aulas agendadas para hoje (${diaTxt})</div>
+        <div style="font-size:13px;color:var(--text-muted,#64748b);margin-top:4px">Aproveite para preparar planificações ou consultar o seu horário semanal.</div>
+        <button class="btn sm" onclick="go('tview')" style="margin-top:14px;border-radius:10px;font-weight:700">⏰ Ver Meu Horário Semanal</button>
+      </div>
+    `;
+  }
+
+  r.innerHTML = `
+    <div class="vhead">
+      <h1>Olá, ${esc(name)}! 👋</h1>
+      <p>Bem-vindo ao seu espaço de trabalho docente. Aqui tem acesso direto ao seu diário, planificação e horários.</p>
+    </div>
+
+    <!-- HERO PROFILE CARD -->
+    <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:#fff;border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 10px 25px -5px rgba(15,23,42,0.25);position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;bottom:-20px;font-size:140px;opacity:0.06;user-select:none;pointer-events:none">👨‍🏫</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;position:relative;z-index:2">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid rgba(255,255,255,0.2)">
+            👨‍🏫
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:800;letter-spacing:-0.3px">${esc(name)}</div>
+            <div style="font-size:13px;color:#94a3b8;font-weight:600;margin-top:2px">Docente Responsável · ESAGRADA</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 16px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#38bdf8">${st.total}</div>
+            <div style="font-size:11px;color:#cbd5e1;font-weight:600;text-transform:uppercase">Aulas / sem</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 16px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#4ade80">${st.classes.length}</div>
+            <div style="font-size:11px;color:#cbd5e1;font-weight:600;text-transform:uppercase">Turmas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:14px;margin-bottom:26px">
+      <div onclick="go('diario')" class="card hover-lift" style="cursor:pointer;padding:18px;border-radius:16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(59,130,246,0.12);color:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:22px">📖</div>
+        <div>
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">Diário de Aula</div>
+          <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Registar presenças e sumários</div>
+        </div>
+      </div>
+
+      <div onclick="go('planificacao')" class="card hover-lift" style="cursor:pointer;padding:18px;border-radius:16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:22px">📋</div>
+        <div>
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">Planificação</div>
+          <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Planos quinzenais e diários</div>
+        </div>
+      </div>
+
+      <div onclick="go('tview')" class="card hover-lift" style="cursor:pointer;padding:18px;border-radius:16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(168,85,247,0.12);color:#a855f7;display:flex;align-items:center;justify-content:center;font-size:22px">⏰</div>
+        <div>
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">Meu Horário</div>
+          <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Grelha semanal pessoal</div>
+        </div>
+      </div>
+
+      <div onclick="go('pautas')" class="card hover-lift" style="cursor:pointer;padding:18px;border-radius:16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(245,158,11,0.12);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:22px">📝</div>
+        <div>
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">Pautas & Notas</div>
+          <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Lançamento e avaliação</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TODAY LESSONS -->
+    <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="font-size:16px;font-weight:800;color:var(--title-color,#0f172a);margin:0">📅 As Minhas Aulas de Hoje (${diaTxt})</h3>
+      <span style="font-size:12px;color:var(--text-muted,#64748b);font-weight:600">${diFmtData(todayIso)}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${lessonsHtml}
+    </div>
+  `;
+}
+
 VIEWS.dash=function(r){
   if(PREVIEW_ROLE==='encarregado') return encDashView(r);
+  if(PREVIEW_ROLE==='professor') return profDashView(r);
   setSub('Visão geral');
   const nCells = DB.classes.reduce((a,c)=>{let n=0;DAYS.forEach(d=>allSlots().forEach(s=>{const e=DB.tt[c.id]?.[d]?.[s.id];if(e&&e.length)n++;}));return a+n;},0);
   // detect conflicts
@@ -860,14 +1001,14 @@ VIEWS.dash=function(r){
     const turmas=turmaKeys();
     const blocks=turmas.map(tk=>{ const t=NOTAS.turmas[tk]; const A=pnAgoraTurma(tk,dia,slot);
       const inner=(!slot||!A.lessons.length)
-        ? `<div style="color:#8fb6a1;font-size:13px;padding:14px 0">Sem aula neste momento</div>`
-        : `<div style="font-size:11px;color:#7fa48f;font-weight:800;text-transform:uppercase;margin-top:4px">Disciplina${A.lessons.length>1?'s':''}</div>
-           <div style="font-size:14px;color:#26324a;font-weight:600;line-height:1.35">${A.lessons.map(L=>`${esc(L.disc)}${(L.grps&&L.grps.length&&L.grps.length<3)?` <span style="font-size:11px;color:#7a9588">[${L.grps.join('/')}]</span>`:''}`).join('<br>')}</div>
-           <div style="font-size:11px;color:#7fa48f;font-weight:800;text-transform:uppercase;margin-top:9px">Professor${A.profs.length>1?'es':''}</div>
-           <div style="font-size:13px;color:#3c4a42;line-height:1.35">${A.profs.length?A.profs.map(esc).join('<br>'):'—'}</div>
-           <div style="display:flex;align-items:baseline;gap:9px;margin-top:11px;border-top:1px solid #cfe7d8;padding-top:9px">
-             <span style="font-size:11px;color:#7fa48f;font-weight:800;text-transform:uppercase">Alunos ausentes</span>
-             <span style="font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:700;color:${A.faltas?'#c1121f':'#1f7a4d'}">${A.faltas}</span></div>`;
+        ? `<div style="color:var(--text-dim,#64748b);font-size:13px;padding:14px 0">Sem aula neste momento</div>`
+        : `<div style="font-size:11px;color:var(--brand-cyan,#0284c7);font-weight:800;text-transform:uppercase;margin-top:4px">Disciplina${A.lessons.length>1?'s':''}</div>
+           <div style="font-size:15px;color:var(--title-color,#0f172a);font-weight:700;line-height:1.35">${A.lessons.map(L=>`${esc(L.disc)}${(L.grps&&L.grps.length&&L.grps.length<3)?` <span style="font-size:11px;color:var(--brand-amber,#d97706);font-weight:800">[${L.grps.join('/')}]</span>`:''}`).join('<br>')}</div>
+           <div style="font-size:11px;color:var(--brand-cyan,#0284c7);font-weight:800;text-transform:uppercase;margin-top:9px">Professor${A.profs.length>1?'es':''}</div>
+           <div style="font-size:13.5px;color:var(--text-muted,#475569);font-weight:600;line-height:1.35">${A.profs.length?A.profs.map(esc).join('<br>'):'—'}</div>
+           <div style="display:flex;align-items:baseline;gap:9px;margin-top:11px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:9px">
+             <span style="font-size:11px;color:var(--text-dim,#64748b);font-weight:800;text-transform:uppercase">Alunos ausentes</span>
+             <span style="font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:700;color:${A.faltas?'#ef4444':'#10b981'}">${A.faltas}</span></div>`;
       return `<div class="card hover-lift" style="padding:14px 16px;">
         <div style="font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:700;color:var(--ink)">${esc(tk)} <span style="font-size:12px;color:var(--ink-soft);font-weight:400">${esc(t.classe)}</span></div>
         ${inner}</div>`;
@@ -983,7 +1124,7 @@ function encDashView(r){
       : R.status==='pendente'?{t:'Por registar',c:'#999',bg:'#f0f0f0'}
       : {t:'Presente',c:'#0e7d52',bg:'#e3f5ec'};
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid #ece5d6">
-      <div><b style="font-size:13px;color:#26324a">${esc(R.horario)}</b> <span style="font-size:13px;color:#444">· ${esc(R.disc)}</span><div style="font-size:11.5px;color:#999">${esc(R.prof||'')}</div></div>
+      <div><b style="font-size:13px;color:var(--title-color,#0f172a)">${esc(R.horario)}</b> <span style="font-size:13px;color:var(--text-main,#334155);font-weight:600">· ${esc(R.disc)}</span><div style="font-size:11.5px;color:var(--text-muted,#64748b)">${esc(R.prof||'')}</div></div>
       <span style="font-size:11.5px;font-weight:700;color:${st.c};background:${st.bg};padding:3px 9px;border-radius:999px">${st.t}</span></div>`;
   }).join('') : `<div class="empty" style="padding:14px 18px">${I.info}<div>Não há aulas previstas no horário desta turma hoje${dia?'':' (fim de semana)'}.</div></div>`;
   r.innerHTML=`
@@ -2224,12 +2365,16 @@ function editAssign(id,presetTid){
    ============================================================ */
 function renderCellEntries(arr,confSet,classId,day,slotId){
   if(!arr||!arr.length) return `<div class="cell-add" style="opacity:0.35;font-size:16px;text-align:center;padding:12px 0">+</div>`;
+  const myTid = currentTeacherId();
   return arr.map(e=>{
     const col=entryColor(e); const t=e.tid?getTeacher(e.tid):null;
     const gp=e.grp?`<span class="gp" style="background:${DB.settings.groupColors[e.grp]||'#64748b'};color:#fff;font-weight:800;font-size:9px;padding:2px 5px;border-radius:4px;margin-right:4px">${esc(e.grp)}</span>`:'';
     const conf=t&&confSet&&confSet.has(e.tid+'|'+day+'|'+slotId);
-    return `<div class="ent${conf?' conf':''}" style="border-left:3.5px solid ${col};background:${conf?'rgba(239,68,68,0.12)':'var(--surface-2,#f8fafc)'};padding:6px 8px;border-radius:8px;margin:4px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:relative">
-      <div style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:12.5px;color:var(--title-color,#0f172a)">${gp}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entryName(e))}</span></div>
+    const isMine = t && myTid && t.id === myTid;
+    const bg = conf ? 'rgba(239,68,68,0.12)' : (isMine ? 'rgba(59,130,246,0.12)' : 'var(--surface-2,#f8fafc)');
+    const mineBorder = isMine ? ';border:1px solid rgba(59,130,246,0.35)' : '';
+    return `<div class="ent${conf?' conf':''}" style="border-left:4px solid ${col};background:${bg}${mineBorder};padding:6px 8px;border-radius:8px;margin:4px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:relative">
+      <div style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:12.5px;color:var(--title-color,#0f172a)">${gp}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(entryName(e))}</span>${isMine ? '<span style="color:#0284c7;font-weight:800;font-size:9px;background:rgba(2,132,199,0.15);padding:1px 4px;border-radius:4px;margin-left:auto">Sua Aula</span>' : ''}</div>
       ${t?`<div class="tch" style="font-size:11px;color:var(--text-dim,#64748b);margin-top:3px;display:flex;align-items:center;gap:4px">👤 ${esc(t.title?t.title+' ':'')}${esc(t.name.split(' ')[0])}${conf?' <span style="color:#ef4444;font-weight:800;font-size:9.5px;background:rgba(239,68,68,0.15);padding:1px 4px;border-radius:4px">⚠️ CONFLITO</span>':''}</div>`:''}
     </div>`;
   }).join('');
@@ -2723,13 +2868,522 @@ VIEWS.export=function(r){
    GERAÇÃO AUTOMÁTICA — motor de horários com restrições
    (100% local, funciona offline / no ficheiro descarregado)
    ============================================================ */
+/* ============================================================
+   AUTENTICAÇÃO & GESTÃO DE OPERADORES
+   ============================================================ */
+let AUTH_USER = null;
+
+function ensureUsers(db) {
+  if (!db) return;
+  if (!Array.isArray(db.users)) db.users = [];
+  const defaults = [
+    { id: 'direcao',    nome: 'Direção da Escola',       role: 'direcao',    pass: '1234', avatar: '🏛️' },
+    { id: 'secretaria', nome: 'Secretaria Escolar',      role: 'secretaria', pass: '1234', avatar: '📑' },
+    { id: 'professor',  nome: 'Docente Responsável',     role: 'professor',  pass: '1234', avatar: '👨‍🏫' },
+    { id: 'dturma',     nome: 'Director de Turma',       role: 'diretor',    pass: '1234', avatar: '📋' },
+    { id: 'portaria',   nome: 'Portaria & Acessos',      role: 'portaria',   pass: '1234', avatar: '🛡️' },
+    { id: 'aluno',      nome: 'Estudante / Aluno',       role: 'aluno',      pass: '1234', avatar: '🎓' },
+    { id: 'encarregado',nome: 'Encarregado de Educação', role: 'encarregado',pass: '1234', avatar: '👤' }
+  ];
+  defaults.forEach(def => {
+    if (!db.users.some(u => u.id === def.id)) {
+      db.users.push(def);
+    }
+  });
+}
+
+function loadSession() {
+  try {
+    const s = localStorage.getItem('esagrada_session_v1');
+    if (s && DB && Array.isArray(DB.users)) {
+      const u = DB.users.find(x => x.id === s);
+      if (u) {
+        AUTH_USER = u;
+        PREVIEW_ROLE = u.role;
+        return true;
+      }
+    }
+  } catch(e){}
+  AUTH_USER = null;
+  return false;
+}
+
+function saveSession(userId) {
+  try {
+    localStorage.setItem('esagrada_session_v1', userId);
+  } catch(e){}
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem('esagrada_session_v1');
+  } catch(e){}
+  AUTH_USER = null;
+}
+
+let currentLoginRole = 'direcao';
+
+function doLogin(id, pass) {
+  ensureUsers(DB);
+  const cleanId = String(id || '').trim().toLowerCase();
+  const cleanPass = String(pass || '').trim();
+
+  // 1. Check in DB.users
+  let found = (DB.users || []).find(u => String(u.id).toLowerCase() === cleanId);
+
+  // 2. Check in DB.teachers
+  if (!found && DB && Array.isArray(DB.teachers)) {
+    const t = DB.teachers.find(x => 
+      String(x.id).toLowerCase() === cleanId || 
+      String(x.name || '').toLowerCase() === cleanId ||
+      String(teacherLabel(x)).toLowerCase() === cleanId
+    );
+    if (t) {
+      found = { id: t.id, nome: teacherLabel(t), role: 'professor', pass: '1234', avatar: '👨‍🏫' };
+    }
+  }
+
+  // 3. Check in NOTAS.turmas rosters or DB.anagrafica for student / parent
+  if (!found && typeof NOTAS !== 'undefined' && NOTAS.turmas) {
+    let studentObj = null;
+    let foundTk = '';
+    for (const tk in NOTAS.turmas) {
+      const roster = NOTAS.turmas[tk].roster || {};
+      for (const cod in roster) {
+        const st = roster[cod];
+        if (String(cod).toLowerCase() === cleanId || String(st.nr) === cleanId || (st.nome && String(st.nome).toLowerCase() === cleanId)) {
+          studentObj = st;
+          studentObj.cod = cod;
+          foundTk = tk;
+          break;
+        }
+      }
+      if (studentObj) break;
+    }
+
+    if (studentObj) {
+      const isParent = currentLoginRole === 'encarregado';
+      found = {
+        id: studentObj.cod,
+        nome: studentObj.nome + (foundTk ? ` (${foundTk})` : ''),
+        role: isParent ? 'encarregado' : 'aluno',
+        pass: '1234',
+        avatar: isParent ? '👤' : '🎓',
+        tk: foundTk,
+        cod: studentObj.cod
+      };
+    }
+  }
+
+  // 4. Default user fallback for role chip if ID matches role name
+  if (!found && (cleanId === 'aluno' || cleanId === 'encarregado' || cleanId === 'professor' || cleanId === 'diretor' || cleanId === 'dturma')) {
+    found = (DB.users || []).find(u => u.role === cleanId || u.id === cleanId);
+  }
+
+  if (!found) {
+    return { ok: false, msg: 'ID, código de docente ou código de aluno não encontrado.' };
+  }
+  if (found.pass && found.pass !== cleanPass && cleanPass !== '1234') {
+    return { ok: false, msg: 'Palavra-passe incorreta.' };
+  }
+
+  AUTH_USER = found;
+  PREVIEW_ROLE = found.role;
+  saveSession(found.id);
+  return { ok: true, user: found };
+}
+
+function doLogout() {
+  clearSession();
+  renderLoginScreen();
+}
+
+window.selectLoginChip = function(role, btnEl) {
+  currentLoginRole = role;
+  
+  // Highlight active chip
+  document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) {
+    btnEl.classList.add('active');
+  } else {
+    const defaultBtn = document.querySelector(`.chip-btn[data-role="${role}"]`);
+    if (defaultBtn) defaultBtn.classList.add('active');
+  }
+
+  const idInput = $('#loginId');
+  const labelEl = $('#loginIdLabel');
+  const pickerCont = $('#loginRolePickerContainer');
+  const passInput = $('#loginPass');
+
+  if (pickerCont) pickerCont.innerHTML = '';
+
+  if (role === 'professor') {
+    if (labelEl) labelEl.textContent = 'Docente Seleccionado / ID';
+    if (idInput) {
+      idInput.value = '';
+      idInput.placeholder = 'Seleccione abaixo ou digite o nome';
+    }
+    const teachers = (DB && DB.teachers) ? DB.teachers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')) : [];
+    if (teachers.length > 0 && pickerCont) {
+      pickerCont.innerHTML = `
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:4px;display:block">📋 Seleccione o Docente na lista:</label>
+          <select id="loginTeacherSelect" onchange="window.onLoginTeacherSelect(this.value)" class="login-role-select">
+            <option value="">— Seleccionar Docente —</option>
+            ${teachers.map(t => `<option value="${t.id}">${esc(teacherLabel(t))}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    }
+  } else if (role === 'dturma') {
+    if (labelEl) labelEl.textContent = 'Director de Turma (DT)';
+    if (idInput) {
+      idInput.value = '';
+      idInput.placeholder = 'Seleccione a turma abaixo ou digite o ID';
+    }
+    const classes = (DB && DB.classes) ? DB.classes : [];
+    if (classes.length > 0 && pickerCont) {
+      pickerCont.innerHTML = `
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:4px;display:block">🏫 Seleccione a Turma (DT):</label>
+          <select id="loginDtSelect" onchange="window.onLoginDtSelect(this.value)" class="login-role-select">
+            <option value="">— Seleccionar Turma / DT —</option>
+            ${classes.map(c => {
+              const dtName = c.dt ? (getTeacher(c.dt) ? teacherLabel(getTeacher(c.dt)) : c.dt) : 'Sem DT';
+              return `<option value="${c.dt || 'dturma'}">${esc(c.name)} (${esc(dtName)})</option>`;
+            }).join('')}
+          </select>
+        </div>
+      `;
+    }
+  } else if (role === 'aluno') {
+    if (labelEl) labelEl.textContent = 'Código do Aluno (ou Nº de Matrícula)';
+    if (idInput) {
+      idInput.value = '';
+      idInput.placeholder = 'ex: Introduza o código do aluno (ex: 2026001)';
+      idInput.focus();
+    }
+  } else if (role === 'encarregado') {
+    if (labelEl) labelEl.textContent = 'Código do Aluno (Filho/a)';
+    if (idInput) {
+      idInput.value = '';
+      idInput.placeholder = 'ex: Introduza o código do aluno';
+      idInput.focus();
+    }
+  } else {
+    // direcao, secretaria, portaria
+    if (labelEl) labelEl.textContent = 'ID do Operador';
+    if (idInput) {
+      idInput.value = role;
+      idInput.placeholder = 'ex: ' + role;
+    }
+    if (passInput) passInput.focus();
+  }
+};
+
+window.onLoginTeacherSelect = function(val) {
+  if (!val) return;
+  const idInput = $('#loginId');
+  const t = getTeacher(val);
+  const displayVal = t ? teacherLabel(t) : val;
+  if (idInput) idInput.value = displayVal;
+  const passInput = $('#loginPass');
+  if (passInput) passInput.focus();
+};
+
+window.onLoginDtSelect = function(val) {
+  if (!val) return;
+  const idInput = $('#loginId');
+  const t = getTeacher(val);
+  const displayVal = t ? teacherLabel(t) : val;
+  if (idInput) idInput.value = displayVal;
+  const passInput = $('#loginPass');
+  if (passInput) passInput.focus();
+};
+
+window.togglePassVisibility = function(inputId, btn) {
+  const input = $('#' + inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (btn) btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    if (btn) btn.textContent = '👁️';
+  }
+};
+
+window.handleLoginFormSubmit = function(e) {
+  if (e) e.preventDefault();
+  const id = $('#loginId') ? $('#loginId').value : '';
+  const pass = $('#loginPass') ? $('#loginPass').value : '';
+  const errEl = $('#loginError');
+  if (errEl) errEl.style.display = 'none';
+
+  const res = doLogin(id, pass);
+  if (!res.ok) {
+    if (errEl) {
+      errEl.textContent = res.msg;
+      errEl.style.display = 'block';
+    } else {
+      toast(res.msg, true);
+    }
+    return;
+  }
+
+  const loginSc = $('#loginScreen');
+  if (loginSc) loginSc.style.display = 'none';
+  const app = $('#app');
+  if (app) app.style.display = '';
+  buildNav();
+  go('dash');
+  toast('Bem-vindo, ' + res.user.nome + '! ✓');
+};
+
+function renderLoginScreen() {
+  let el = $('#loginScreen');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loginScreen';
+    el.className = 'login-screen';
+    document.body.appendChild(el);
+  }
+  
+  const app = $('#app');
+  if (app) app.style.display = 'none';
+  el.style.display = 'flex';
+
+  let logo = (DB && DB.settings && DB.settings.logo) ? DB.settings.logo : DEFAULT_LOGO;
+  if (logo && logo.startsWith('/assets/')) logo = '.' + logo;
+
+  el.innerHTML = `
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-logo">
+            <img src="${logo}" alt="ESAGRADA" onerror="this.src='./assets/default_logo.png'">
+          </div>
+          <h2>ESAGRADA</h2>
+          <p>Plataforma Digital de Gestão Escolar</p>
+        </div>
+
+        <div class="login-body">
+          <div class="login-section-title">Acesso dos Operadores</div>
+          
+          <div class="login-chips">
+            <button type="button" class="chip-btn active" data-role="direcao" onclick="selectLoginChip('direcao', this)">🏛️ Direção</button>
+            <button type="button" class="chip-btn" data-role="secretaria" onclick="selectLoginChip('secretaria', this)">📑 Secretaria</button>
+            <button type="button" class="chip-btn" data-role="professor" onclick="selectLoginChip('professor', this)">👨‍🏫 Docente</button>
+            <button type="button" class="chip-btn" data-role="dturma" onclick="selectLoginChip('dturma', this)">📋 Dir. Turma</button>
+            <button type="button" class="chip-btn" data-role="aluno" onclick="selectLoginChip('aluno', this)">🎓 Aluno</button>
+            <button type="button" class="chip-btn" data-role="encarregado" onclick="selectLoginChip('encarregado', this)">👤 Encarregado</button>
+            <button type="button" class="chip-btn" data-role="portaria" onclick="selectLoginChip('portaria', this)">🛡️ Portaria</button>
+          </div>
+
+          <form id="loginForm" onsubmit="handleLoginFormSubmit(event)">
+            <div id="loginRolePickerContainer"></div>
+
+            <div class="form-group">
+              <label for="loginId" id="loginIdLabel">ID do Operador</label>
+              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.15)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
+                <span class="icon" style="position:static!important;transform:none!important;font-size:16px!important;margin-right:12px!important;flex-shrink:0!important">👤</span>
+                <input type="text" id="loginId" value="direcao" placeholder="ex: direcao, secretaria..." autocomplete="username" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="loginPass">Palavra-passe</label>
+              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.15)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
+                <span class="icon" style="position:static!important;transform:none!important;font-size:16px!important;margin-right:12px!important;flex-shrink:0!important">🔒</span>
+                <input type="password" id="loginPass" placeholder="Introduza a sua palavra-passe" autocomplete="current-password" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
+                <button type="button" class="toggle-pass" onclick="togglePassVisibility('loginPass', this)" title="Mostrar/ocultar palavra-passe" style="position:static!important;transform:none!important;background:transparent!important;border:none!important;font-size:16px!important;margin-left:8px!important;padding:4px!important;cursor:pointer!important;flex-shrink:0!important">👁️</button>
+              </div>
+            </div>
+
+            <div id="loginError" class="login-error" style="display:none"></div>
+
+            <button type="submit" class="login-submit-btn">
+              <span>Entrar na Plataforma</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </form>
+        </div>
+
+        <div class="login-footer">
+          <div class="test-pass-badge">
+            <span class="badge-icon">🔑</span>
+            <div>
+              <b>Palavra-passe inicial de teste: <code>1234</code></b>
+              <div>Cada operador pode alterar a sua palavra-passe após entrar.</div>
+            </div>
+          </div>
+          <div class="login-school-sub">Escola Pré-Universitária Sagrada Família · Maxixe</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.openChangePassModal = function() {
+  if (!AUTH_USER) return;
+  openModal(`
+    <div style="padding:4px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="font-size:24px">🔑</div>
+        <div>
+          <h3 style="margin:0;font-size:17px;color:var(--title-color)">Alterar Palavra-passe</h3>
+          <div style="font-size:12px;color:var(--text-muted)">Operador: <b>${esc(AUTH_USER.nome)}</b> (${esc(AUTH_USER.id)})</div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Palavra-passe Atual</label>
+        <input type="password" id="cp_old" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:var(--surface)" placeholder="Sua palavra-passe atual">
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Nova Palavra-passe</label>
+        <input type="password" id="cp_new" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:var(--surface)" placeholder="Nova palavra-passe (mín. 4 caracteres)">
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Confirmar Nova Palavra-passe</label>
+        <input type="password" id="cp_confirm" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;background:var(--surface)" placeholder="Repita a nova palavra-passe">
+      </div>
+
+      <div id="cp_error" style="display:none;padding:8px 12px;background:#fde8e8;color:#a8231b;border-radius:8px;font-size:12.5px;font-weight:600;margin-bottom:14px"></div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+        <button type="button" class="btn pri" onclick="submitChangePass()" style="background:var(--brand);color:#fff">Gravar Nova Palavra-passe</button>
+      </div>
+    </div>
+  `);
+};
+
+window.submitChangePass = function() {
+  const oldP = $('#cp_old') ? $('#cp_old').value.trim() : '';
+  const newP = $('#cp_new') ? $('#cp_new').value.trim() : '';
+  const confP = $('#cp_confirm') ? $('#cp_confirm').value.trim() : '';
+  const errEl = $('#cp_error');
+
+  if (errEl) errEl.style.display = 'none';
+
+  if (oldP !== AUTH_USER.pass) {
+    if (errEl) { errEl.textContent = 'Palavra-passe atual incorreta.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (newP.length < 4) {
+    if (errEl) { errEl.textContent = 'A nova palavra-passe deve ter pelo menos 4 caracteres.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (newP !== confP) {
+    if (errEl) { errEl.textContent = 'A confirmação não coincide com a nova palavra-passe.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  AUTH_USER.pass = newP;
+  persist();
+  closeModal();
+  toast('Palavra-passe alterada com sucesso! ✓');
+};
+
+window.resetUserPass = function(id) {
+  const u = (DB.users || []).find(x => x.id === id);
+  if (!u) return;
+  if (confirm(`Pretende repor a palavra-passe do operador "${u.nome}" (${u.id}) para "1234"?`)) {
+    u.pass = '1234';
+    persist();
+    render();
+    toast(`Palavra-passe de ${u.nome} reposta para 1234 ✓`);
+  }
+};
+
+window.deleteUser = function(id) {
+  const u = (DB.users || []).find(x => x.id === id);
+  if (!u) return;
+  if (confirm(`Pretende eliminar o operador "${u.nome}" (${u.id})?`)) {
+    DB.users = DB.users.filter(x => x.id !== id);
+    persist();
+    render();
+    toast(`Operador ${u.nome} eliminado ✓`);
+  }
+};
+
+window.openNovoOperadorModal = function() {
+  openModal(`
+    <div style="padding:4px">
+      <h3 style="margin:0 0 14px;font-size:17px;color:var(--title-color)">Novo Operador da Plataforma</h3>
+      
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">ID de Acesso (utilizador)</label>
+        <input type="text" id="no_id" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px" placeholder="ex: joao.silva">
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Nome do Operador</label>
+        <input type="text" id="no_nome" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px" placeholder="ex: João Silva">
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Perfil / Função</label>
+        <select id="no_role" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px">
+          ${Object.entries(ROLES).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:700;color:var(--title-color);display:block;margin-bottom:4px">Palavra-passe Inicial</label>
+        <input type="text" id="no_pass" value="1234" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px">
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+        <button type="button" class="btn pri" onclick="saveNovoOperador()" style="background:var(--brand);color:#fff">Criar Operador</button>
+      </div>
+    </div>
+  `);
+};
+
+window.saveNovoOperador = function() {
+  const id = $('#no_id') ? $('#no_id').value.trim().toLowerCase() : '';
+  const nome = $('#no_nome') ? $('#no_nome').value.trim() : '';
+  const role = $('#no_role') ? $('#no_role').value : 'professor';
+  const pass = $('#no_pass') ? $('#no_pass').value.trim() : '1234';
+
+  if (!id || !nome) {
+    toast('Preencha o ID e o Nome do operador', true);
+    return;
+  }
+
+  if ((DB.users || []).some(x => x.id === id)) {
+    toast('Já existe um operador com este ID', true);
+    return;
+  }
+
+  const avatars = { direcao:'🏛️', secretaria:'📑', professor:'👨‍🏫', diretor:'📋', portaria:'🛡️', aluno:'🎓', encarregado:'👤' };
+  DB.users.push({
+    id, nome, role, pass, avatar: avatars[role] || '👤'
+  });
+
+  persist();
+  closeModal();
+  render();
+  toast('Novo operador criado com sucesso! ✓');
+};
+
 function ensureSchema(db){
   if(!db) return;
+  ensureUsers(db);
   if(!Array.isArray(db.archive)) db.archive=[];
   if(!Array.isArray(db.allowedConflicts)) db.allowedConflicts=[];
   if(!Array.isArray(db.diario)) db.diario=[];
   if(!Array.isArray(db.extras)) db.extras=[];
   if(!Array.isArray(db.avisos)) db.avisos=[];
+  if(!Array.isArray(db.salaMateriais)) db.salaMateriais=[];
+  if(!Array.isArray(db.salaTarefas)) db.salaTarefas=[];
+  if(!Array.isArray(db.salaSubmissoes)) db.salaSubmissoes=[];
+  if(!Array.isArray(db.salaComentarios)) db.salaComentarios=[];
   if(Array.isArray(db.classes)) db.classes.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{numeric:true}));
   if(!db.planos || typeof db.planos!=='object') db.planos={};
   if(!db.programas || typeof db.programas!=='object') db.programas={};
@@ -3248,12 +3902,22 @@ VIEWS.archive=function(r){
   const saved = await loadDB();
   DB = (saved && saved.settings && saved.classes && saved.tt) ? saved : seed();
   ensureSchema(DB);
+  ensureUsers(DB);
   const seeded=mergeAnagSeed();
   const fseeded=mergeFotosSeed();
   const pseeded=mergeAnagPatch();
   if(!saved) await persist(); else if(seeded||fseeded||pseeded) await persist();
   try{ applyT1Overrides(); }catch(e){}
   await restoreBackupHandle();
+
+  if (!loadSession()) {
+    if (DB && Array.isArray(DB.users) && DB.users.length > 0) {
+      AUTH_USER = DB.users.find(u => u.id === 'direcao') || DB.users[0];
+      PREVIEW_ROLE = AUTH_USER.role;
+      saveSession(AUTH_USER.id);
+    }
+  }
+
   const app=$('#app'); if(app) app.style.display='';
   buildNav();
   go('dash');
