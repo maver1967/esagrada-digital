@@ -10137,11 +10137,17 @@ function renderSvMateriais(list, isTeacherOrAdmin) {
           <h4 style="margin:0 0 6px 0;font-size:15px;font-weight:700;color:var(--title-color,#0f172a)">${esc(m.titulo)}</h4>
           <p style="margin:0;font-size:13px;color:var(--text-color,#334155);line-height:1.5;white-space:pre-wrap">${esc(m.descricao || '')}</p>
           
-          ${m.link ? `
-          <div style="margin-top:12px">
-            <a href="${esc(m.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f1f5f9;border-radius:8px;font-size:12px;font-weight:700;color:#0284c7;text-decoration:none">
-              🔗 Abrir Anexo / Link
-            </a>
+          ${(m.anexo || m.link) ? `
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+            ${m.anexo ? `
+            <a href="${m.anexo.data}" download="${esc(m.anexo.name)}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d;text-decoration:none">
+              📎 ${esc(m.anexo.name)} (${m.anexo.size})
+            </a>` : ''}
+
+            ${m.link ? `
+            <a href="${esc(m.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#eff6ff' : '#f1f5f9'};border:1px solid ${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#bfdbfe' : '#cbd5e1'};border-radius:8px;font-size:12px;font-weight:700;color:${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#1d4ed8' : '#0284c7'};text-decoration:none">
+              ${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '📁 Abrir no Google Drive' : '🔗 Abrir Link Anexo'}
+            </a>` : ''}
           </div>` : ''}
         </div>
 
@@ -10185,6 +10191,19 @@ function renderSvTarefas(list, isTeacherOrAdmin) {
 
           <h4 style="margin:0 0 6px 0;font-size:16px;font-weight:800;color:var(--title-color,#0f172a)">${esc(t.titulo)}</h4>
           <p style="margin:0 0 10px 0;font-size:13px;color:var(--text-color,#334155);line-height:1.5">${esc(t.descricao || '')}</p>
+
+          ${(t.anexo || t.link) ? `
+          <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px">
+            ${t.anexo ? `
+            <a href="${t.anexo.data}" download="${esc(t.anexo.name)}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-weight:700;color:#15803d;text-decoration:none">
+              📎 Enunciado: ${esc(t.anexo.name)} (${t.anexo.size})
+            </a>` : ''}
+
+            ${t.link ? `
+            <a href="${esc(t.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#eff6ff' : '#f1f5f9'};border:1px solid ${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#bfdbfe' : '#cbd5e1'};border-radius:8px;font-size:12px;font-weight:700;color:${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#1d4ed8' : '#0284c7'};text-decoration:none">
+              ${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '📁 Abrir Enunciado no Google Drive' : '🔗 Abrir Link Enunciado'}
+            </a>` : ''}
+          </div>` : ''}
 
           <div style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;color:var(--text-muted,#64748b)">
             <span>🎯 Cotação: ${t.cotacao || 20} val.</span>
@@ -10303,26 +10322,104 @@ function renderSvCorrecoes(curCls, tarefas) {
 
 /* MODAIS & ACTIONS FOR SALA VIRTUAL */
 
+window.saveData = function() {
+  if(typeof persist === 'function') persist();
+};
+
+window.svPendingAnexo = null;
+
+window.svOnFileSelect = function(input) {
+  if(!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+  const sizeKb = Math.round(file.size / 1024);
+  const sizeFmt = file.size > 1048576 ? `${sizeMb} MB` : `${sizeKb} KB`;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    window.svPendingAnexo = {
+      name: file.name,
+      size: sizeFmt,
+      type: file.type,
+      data: e.target.result
+    };
+    const badge = document.getElementById('anexo_badge');
+    if(badge) {
+      badge.innerHTML = `
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12.5px;font-weight:700;color:#166534">
+          <span>📎 ${esc(file.name)} (${sizeFmt})</span>
+          <button type="button" onclick="svRemoveAnexo()" style="background:none;border:none;color:#dc2626;font-weight:800;cursor:pointer;padding:0;font-size:14px" title="Remover ficheiro">&times;</button>
+        </div>`;
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+window.svRemoveAnexo = function() {
+  window.svPendingAnexo = null;
+  const badge = document.getElementById('anexo_badge');
+  if(badge) badge.innerHTML = '';
+  const finp = document.getElementById('mat_file_input') || document.getElementById('tar_file_input');
+  if(finp) finp.value = '';
+};
+
+window.svPasteDriveLink = function(fieldId) {
+  const inp = document.getElementById(fieldId);
+  if(inp) {
+    if(!inp.value || !inp.value.startsWith('http')) {
+      inp.value = 'https://drive.google.com/';
+    }
+    inp.focus();
+    toast('Cole o link completo do Google Drive ou Dropbox no campo!');
+  }
+};
+
 window.svModalNovoMaterial = function() {
+  window.svPendingAnexo = null;
   const html = `
   <div style="padding:4px">
-    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">📚 Novo Material Didático</h3>
+    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a);display:flex;align-items:center;gap:8px">
+      <span>📚 Novo Material Didático</span>
+    </h3>
+    
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
       <div>
         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Título do Material *</label>
         <input type="text" id="mat_titulo" placeholder="ex: Apontamentos de Física - Cinemática" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:600">
       </div>
+
       <div>
         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Descrição / Conteúdo *</label>
-        <textarea id="mat_desc" rows="4" placeholder="Escreva aqui as instruções ou resumo..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
+        <textarea id="mat_desc" rows="4" placeholder="Escreva aqui o resumo da aula ou instruções para os alunos..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
       </div>
-      <div>
-        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Link / Ficheiro Anexo (opcional)</label>
-        <input type="url" id="mat_link" placeholder="https://drive.google.com/..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px">
+
+      <!-- FILE & LINK ATTACHMENT SECTION -->
+      <div style="background:var(--surface-2,#f8fafc);padding:12px;border-radius:12px;border:1px dashed var(--line,#cbd5e1);display:flex;flex-direction:column;gap:10px">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color,#0f172a);display:flex;align-items:center;gap:6px">
+          <span>📎 Anexos e Links Externos</span>
+        </label>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input type="file" id="mat_file_input" style="display:none" onchange="svOnFileSelect(this)">
+          <button type="button" onclick="document.getElementById('mat_file_input').click()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;color:#0f172a;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.04)">
+            📎 Anexar Ficheiro (PDF, Doc, Imagem...)
+          </button>
+          
+          <button type="button" onclick="svPasteDriveLink('mat_link')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12.5px;font-weight:700;color:#1d4ed8;cursor:pointer">
+            📁 Link Google Drive
+          </button>
+        </div>
+
+        <div id="anexo_badge"></div>
+
+        <div>
+          <input type="text" id="mat_link" placeholder="Cole o link do Google Drive, Dropbox ou site (opcional)..." style="width:100%;padding:8px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:8px;font-size:12.5px">
+        </div>
       </div>
+
       <div style="display:flex;justify-content:end;gap:10px;margin-top:10px">
-        <button class="btn sm" onclick="closeModal()">Cancelar</button>
-        <button class="btn sm primary" onclick="svGuardarMaterial()">Publicar Material</button>
+        <button type="button" class="btn sm" onclick="closeModal()">Cancelar</button>
+        <button type="button" class="btn sm primary" style="background:#2563eb;font-weight:800;padding:9px 18px" onclick="svGuardarMaterial()">Publicar Material</button>
       </div>
     </div>
   </div>`;
@@ -10330,52 +10427,69 @@ window.svModalNovoMaterial = function() {
 };
 
 window.svGuardarMaterial = function() {
-  const titulo = $('#mat_titulo').value.trim();
-  const desc = $('#mat_desc').value.trim();
-  const link = $('#mat_link').value.trim();
+  try {
+    const tituloEl = document.getElementById('mat_titulo');
+    const descEl = document.getElementById('mat_desc');
+    const linkEl = document.getElementById('mat_link');
 
-  if(!titulo || !desc) {
-    alert('Preencha o título e a descrição.');
-    return;
+    const titulo = tituloEl ? tituloEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+    const link = linkEl ? linkEl.value.trim() : '';
+
+    if(!titulo || !desc) {
+      toast('Por favor, preencha o título e a descrição.', true);
+      return;
+    }
+
+    DB.salaMateriais = DB.salaMateriais || [];
+    DB.salaMateriais.unshift({
+      id: 'mat_' + Date.now(),
+      clsId: SVUI.cls,
+      disc: SVUI.disc,
+      tri: SVUI.tri,
+      titulo: titulo,
+      descricao: desc,
+      link: link,
+      anexo: window.svPendingAnexo ? { ...window.svPendingAnexo } : null,
+      data: new Date().toLocaleDateString('pt-PT')
+    });
+
+    window.svPendingAnexo = null;
+    persist();
+    closeModal();
+    toast('Material publicado com sucesso! 📚');
+    render();
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao guardar material.', true);
   }
-
-  DB.salaMateriais = DB.salaMateriais || [];
-  DB.salaMateriais.unshift({
-    id: 'mat_' + Date.now(),
-    clsId: SVUI.cls,
-    disc: SVUI.disc,
-    tri: SVUI.tri,
-    titulo: titulo,
-    descricao: desc,
-    link: link,
-    data: new Date().toLocaleDateString('pt-PT')
-  });
-
-  saveData();
-  closeModal();
-  render();
 };
 
 window.svRemoverMaterial = function(id) {
   if(!confirm('Tem certeza que deseja remover este material?')) return;
   DB.salaMateriais = (DB.salaMateriais || []).filter(m => m.id !== id);
-  saveData();
+  persist();
+  toast('Material eliminado.');
   render();
 };
 
 window.svModalNovaTarefa = function() {
+  window.svPendingAnexo = null;
   const html = `
   <div style="padding:4px">
     <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">📝 Nova Tarefa / Trabalho</h3>
+    
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
       <div>
         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Título da Tarefa *</label>
         <input type="text" id="tar_titulo" placeholder="ex: Resolução do Exercício 4 - Página 32" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:600">
       </div>
+
       <div>
         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Descrição & Requisitos *</label>
-        <textarea id="tar_desc" rows="4" placeholder="Descreva os problemas a resolver..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
+        <textarea id="tar_desc" rows="4" placeholder="Descreva os problemas a resolver e critérios de entrega..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
       </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
           <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Data Limite de Entrega</label>
@@ -10386,9 +10500,34 @@ window.svModalNovaTarefa = function() {
           <input type="number" id="tar_cotacao" value="20" min="1" max="20" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:800">
         </div>
       </div>
+
+      <!-- FILE & LINK ATTACHMENT SECTION -->
+      <div style="background:var(--surface-2,#f8fafc);padding:12px;border-radius:12px;border:1px dashed var(--line,#cbd5e1);display:flex;flex-direction:column;gap:10px">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color,#0f172a);display:flex;align-items:center;gap:6px">
+          <span>📎 Anexos e Enunciados</span>
+        </label>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input type="file" id="tar_file_input" style="display:none" onchange="svOnFileSelect(this)">
+          <button type="button" onclick="document.getElementById('tar_file_input').click()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;color:#0f172a;cursor:pointer">
+            📎 Anexar Enunciado (PDF/Doc)
+          </button>
+          
+          <button type="button" onclick="svPasteDriveLink('tar_link')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12.5px;font-weight:700;color:#1d4ed8;cursor:pointer">
+            📁 Link Google Drive
+          </button>
+        </div>
+
+        <div id="anexo_badge"></div>
+
+        <div>
+          <input type="text" id="tar_link" placeholder="Cole o link do Google Drive ou documento (opcional)..." style="width:100%;padding:8px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:8px;font-size:12.5px">
+        </div>
+      </div>
+
       <div style="display:flex;justify-content:end;gap:10px;margin-top:10px">
-        <button class="btn sm" onclick="closeModal()">Cancelar</button>
-        <button class="btn sm primary" style="background:#10b981" onclick="svGuardarTarefa()">Publicar Tarefa</button>
+        <button type="button" class="btn sm" onclick="closeModal()">Cancelar</button>
+        <button type="button" class="btn sm primary" style="background:#10b981;font-weight:800;padding:9px 18px" onclick="svGuardarTarefa()">Publicar Tarefa</button>
       </div>
     </div>
   </div>`;
@@ -10396,38 +10535,55 @@ window.svModalNovaTarefa = function() {
 };
 
 window.svGuardarTarefa = function() {
-  const titulo = $('#tar_titulo').value.trim();
-  const desc = $('#tar_desc').value.trim();
-  const dataLim = $('#tar_data').value;
-  const cotacao = parseFloat($('#tar_cotacao').value) || 20;
+  try {
+    const tituloEl = document.getElementById('tar_titulo');
+    const descEl = document.getElementById('tar_desc');
+    const dataEl = document.getElementById('tar_data');
+    const cotEl = document.getElementById('tar_cotacao');
+    const linkEl = document.getElementById('tar_link');
 
-  if(!titulo || !desc) {
-    alert('Preencha o título e a descrição.');
-    return;
+    const titulo = tituloEl ? tituloEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+    const dataLim = dataEl ? dataEl.value : '';
+    const cotacao = cotEl ? (parseFloat(cotEl.value) || 20) : 20;
+    const link = linkEl ? linkEl.value.trim() : '';
+
+    if(!titulo || !desc) {
+      toast('Por favor, preencha o título e a descrição da tarefa.', true);
+      return;
+    }
+
+    DB.salaTarefas = DB.salaTarefas || [];
+    DB.salaTarefas.unshift({
+      id: 'tar_' + Date.now(),
+      clsId: SVUI.cls,
+      disc: SVUI.disc,
+      tri: SVUI.tri,
+      titulo: titulo,
+      descricao: desc,
+      dataLimite: dataLim,
+      cotacao: cotacao,
+      link: link,
+      anexo: window.svPendingAnexo ? { ...window.svPendingAnexo } : null
+    });
+
+    window.svPendingAnexo = null;
+    persist();
+    closeModal();
+    toast('Tarefa publicada com sucesso! 📝');
+    render();
+  } catch(e) {
+    console.error(e);
+    toast('Erro ao guardar tarefa.', true);
   }
-
-  DB.salaTarefas = DB.salaTarefas || [];
-  DB.salaTarefas.unshift({
-    id: 'tar_' + Date.now(),
-    clsId: SVUI.cls,
-    disc: SVUI.disc,
-    tri: SVUI.tri,
-    titulo: titulo,
-    descricao: desc,
-    dataLimite: dataLim,
-    cotacao: cotacao
-  });
-
-  saveData();
-  closeModal();
-  render();
 };
 
 window.svRemoverTarefa = function(id) {
   if(!confirm('Deseja eliminar esta tarefa e todas as submissões associadas?')) return;
   DB.salaTarefas = (DB.salaTarefas || []).filter(t => t.id !== id);
   DB.salaSubmissoes = (DB.salaSubmissoes || []).filter(s => s.tarefaId !== id);
-  saveData();
+  persist();
+  toast('Tarefa eliminada.');
   render();
 };
 
@@ -10439,7 +10595,7 @@ window.svGravarNotaAluno = function(tarefaId, alunoId, nota) {
     DB.salaSubmissoes.push(sub);
   }
   sub.nota = parseFloat(nota);
-  saveData();
+  persist();
 };
 
 window.svGravarFeedbackAluno = function(tarefaId, alunoId, fb) {
@@ -10450,7 +10606,7 @@ window.svGravarFeedbackAluno = function(tarefaId, alunoId, fb) {
     DB.salaSubmissoes.push(sub);
   }
   sub.feedback = fb;
-  saveData();
+  persist();
 };
 
 window.svLancarCadernetaModal = function(tarefaId, alunoId, notaVal) {
@@ -10473,16 +10629,15 @@ window.svExecutarLancarCaderneta = function(tarefaId, alunoId, notaVal, colKey) 
   const sub = (DB.salaSubmissoes || []).find(s => s.tarefaId === tarefaId && String(s.alunoId) === String(alunoId));
   if(sub) sub.lancedOnCaderneta = true;
 
-  // Save into CAD_ITRIM_2026 or DB.cadernetas structure
   const discName = SVUI.disc || 'Geral';
   if(typeof CAD_ITRIM_2026 !== 'undefined' && CAD_ITRIM_2026[discName]) {
     if(!CAD_ITRIM_2026[discName][colKey]) CAD_ITRIM_2026[discName][colKey] = {};
     CAD_ITRIM_2026[discName][colKey][alunoId] = parseFloat(notaVal);
   }
 
-  saveData();
+  persist();
   closeModal();
-  alert(`Nota ${notaVal} lançada com sucesso na coluna ${colKey.toUpperCase()}!`);
+  toast(`Nota ${notaVal} lançada com sucesso na coluna ${colKey.toUpperCase()}! ✓`);
   render();
 };
 
@@ -10507,14 +10662,15 @@ window.svModalComentarios = function(itemId, itemType) {
 
     <div style="display:flex;gap:8px;margin-top:10px">
       <input type="text" id="sv_com_input" placeholder="Escreva uma dúvida ou resposta..." style="flex:1;padding:8px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px">
-      <button class="btn sm primary" onclick="svGuardarComentario('${itemId}', '${itemType}')">Enviar</button>
+      <button type="button" class="btn sm primary" onclick="svGuardarComentario('${itemId}', '${itemType}')">Enviar</button>
     </div>
   </div>`;
   openModal(html);
 };
 
 window.svGuardarComentario = function(itemId, itemType) {
-  const txt = $('#sv_com_input').value.trim();
+  const inp = document.getElementById('sv_com_input');
+  const txt = inp ? inp.value.trim() : '';
   if(!txt) return;
 
   DB.salaComentarios = DB.salaComentarios || [];
@@ -10526,7 +10682,7 @@ window.svGuardarComentario = function(itemId, itemType) {
     data: new Date().toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})
   });
 
-  saveData();
+  persist();
   closeModal();
   svModalComentarios(itemId, itemType);
 };
