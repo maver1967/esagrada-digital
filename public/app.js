@@ -9993,3 +9993,534 @@ VIEWS.portaria = function(r){
     }
   }, 200);
 };
+
+/* ============================================================
+   SALA VIRTUAL (GOOGLE CLASSROOM / LMS LITE)
+   ============================================================ */
+
+window.SVUI = window.SVUI || { cls: null, disc: null, tab: 'materiais', tri: 'T1' };
+
+VIEWS.salaVirtual = function(r) {
+  setSub('Sala Virtual (LMS)');
+  const db = DB;
+  ensureSchema(db);
+
+  if(!SVUI.cls && db.classes.length > 0) SVUI.cls = db.classes[0].id;
+  
+  const curCls = db.classes.find(c => String(c.id) === String(SVUI.cls)) || db.classes[0];
+  const clsName = curCls ? curCls.name : 'Turma';
+
+  // Get subjects taught in this class
+  const discs = (curCls && curCls.subjects) ? curCls.subjects : (db.subjects || []).map(s => s.name);
+  if(!SVUI.disc && discs.length > 0) SVUI.disc = discs[0];
+
+  const role = currentUser ? (currentUser.role || 'ADMIN') : 'ADMIN';
+  const isTeacherOrAdmin = (role === 'ADMIN' || role === 'DIRECAO' || role === 'PROFESSOR');
+
+  // Filter materials & tasks
+  const materiais = (db.salaMateriais || []).filter(m => String(m.clsId) === String(SVUI.cls) && (!SVUI.disc || m.disc === SVUI.disc) && (!SVUI.tri || m.tri === SVUI.tri));
+  const tarefas = (db.salaTarefas || []).filter(t => String(t.clsId) === String(SVUI.cls) && (!SVUI.disc || t.disc === SVUI.disc) && (!SVUI.tri || t.tri === SVUI.tri));
+
+  r.innerHTML = `
+  <div style="max-width:1200px;margin:0 auto;padding:16px 12px">
+    
+    <!-- HERO HEADER -->
+    <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);border-radius:20px;padding:24px;color:#fff;margin-bottom:20px;box-shadow:0 10px 25px -5px rgba(15,23,42,0.25);position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;bottom:-20px;opacity:0.1;font-size:160px;line-height:1">🎓</div>
+      
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:2">
+        <div>
+          <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:0.5px;color:#38bdf8;margin-bottom:8px">
+            <span>SALAVIRTUAL &bull; LMS</span>
+          </div>
+          <h2 style="font-size:24px;font-weight:800;margin:4px 0 6px 0;letter-spacing:-0.5px;color:#f8fafc">
+            ${esc(clsName)} ${SVUI.disc ? '&bull; ' + esc(SVUI.disc) : ''}
+          </h2>
+          <p style="margin:0;font-size:13px;color:#94a3b8">Espaço virtual de aprendizagem, tarefas e materiais didáticos</p>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <!-- Class Selector Button -->
+          <button type="button" onclick="selectClassModal(SVUI.cls, id => { SVUI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;backdrop-filter:blur(10px)">
+            🏫 <span>${esc(clsName)}</span> &#9662;
+          </button>
+
+          <!-- Subject Selector -->
+          ${discs.length > 0 ? `
+          <select onchange="SVUI.disc=this.value;render();" style="padding:9px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;backdrop-filter:blur(10px);outline:none">
+            ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''} style="color:#0f172a">${esc(d)}</option>`).join('')}
+          </select>` : ''}
+
+          <!-- Trimester Selector -->
+          <div style="display:inline-flex;background:rgba(255,255,255,0.1);padding:3px;border-radius:12px;border:1px solid rgba(255,255,255,0.15)">
+            ${['T1','T2','T3'].map(t => `
+              <button type="button" onclick="SVUI.tri='${t}';render();" style="padding:6px 12px;border-radius:9px;border:none;background:${SVUI.tri === t ? '#3b82f6' : 'transparent'};color:#fff;font-size:12px;font-weight:800;cursor:pointer">
+                ${t === 'T1' ? '1º Trim' : t === 'T2' ? '2º Trim' : '3º Trim'}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN TABS -->
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--line,#e2e8f0);margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="SVUI.tab='materiais';render();" style="display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;border-bottom:3px solid ${SVUI.tab === 'materiais' ? '#3b82f6' : 'transparent'};background:transparent;color:${SVUI.tab === 'materiais' ? '#3b82f6' : 'var(--text-muted,#64748b)'};font-weight:800;font-size:14px;cursor:pointer">
+          📚 <span>Materiais (${materiais.length})</span>
+        </button>
+        
+        <button type="button" onclick="SVUI.tab='tarefas';render();" style="display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;border-bottom:3px solid ${SVUI.tab === 'tarefas' ? '#3b82f6' : 'transparent'};background:transparent;color:${SVUI.tab === 'tarefas' ? '#3b82f6' : 'var(--text-muted,#64748b)'};font-weight:800;font-size:14px;cursor:pointer">
+          📝 <span>Tarefas & Trabalhos (${tarefas.length})</span>
+        </button>
+
+        ${isTeacherOrAdmin ? `
+        <button type="button" onclick="SVUI.tab='correcoes';render();" style="display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;border-bottom:3px solid ${SVUI.tab === 'correcoes' ? '#3b82f6' : 'transparent'};background:transparent;color:${SVUI.tab === 'correcoes' ? '#3b82f6' : 'var(--text-muted,#64748b)'};font-weight:800;font-size:14px;cursor:pointer">
+          📊 <span>Avaliação & Caderneta</span>
+        </button>` : ''}
+      </div>
+
+      ${isTeacherOrAdmin ? `
+      <div style="display:flex;gap:10px;margin-bottom:8px">
+        ${SVUI.tab === 'materiais' ? `
+          <button type="button" onclick="svModalNovoMaterial()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:12px;background:#3b82f6;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,0.3)">
+            ➕ Novo Material
+          </button>
+        ` : SVUI.tab === 'tarefas' ? `
+          <button type="button" onclick="svModalNovaTarefa()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:12px;background:#10b981;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+            ➕ Nova Tarefa
+          </button>
+        ` : ''}
+      </div>` : ''}
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div id="svTabContent">
+      ${SVUI.tab === 'materiais' ? renderSvMateriais(materiais, isTeacherOrAdmin) :
+        SVUI.tab === 'tarefas' ? renderSvTarefas(tarefas, isTeacherOrAdmin) :
+        renderSvCorrecoes(curCls, tarefas)}
+    </div>
+
+  </div>
+  `;
+};
+
+/* RENDER MATERIAIS */
+function renderSvMateriais(list, isTeacherOrAdmin) {
+  if(list.length === 0) {
+    return `
+    <div class="card" style="padding:48px 24px;text-align:center;background:var(--surface,#fff);border-radius:16px;border:1px solid var(--line,#e2e8f0)">
+      <div style="font-size:48px;margin-bottom:12px">📚</div>
+      <h3 style="margin:0 0 6px 0;font-size:16px;color:var(--title-color,#0f172a)">Nenhum material publicado</h3>
+      <p style="margin:0;font-size:13.5px;color:var(--text-muted,#64748b)">Ainda não foram partilhados resumos ou conteúdos para esta turma neste trimestre.</p>
+    </div>`;
+  }
+
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:16px">
+    ${list.map(m => {
+      const coms = (DB.salaComentarios || []).filter(c => c.itemId === m.id);
+      return `
+      <div class="card" style="padding:20px;background:var(--surface,#fff);border-radius:16px;border:1px solid var(--line,#e2e8f0);box-shadow:0 4px 12px rgba(0,0,0,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800">${esc(m.disc)}</span>
+            <span style="font-size:11px;color:var(--text-muted,#64748b)">${esc(m.data || '')}</span>
+          </div>
+
+          <h4 style="margin:0 0 6px 0;font-size:15px;font-weight:700;color:var(--title-color,#0f172a)">${esc(m.titulo)}</h4>
+          <p style="margin:0;font-size:13px;color:var(--text-color,#334155);line-height:1.5;white-space:pre-wrap">${esc(m.descricao || '')}</p>
+          
+          ${m.link ? `
+          <div style="margin-top:12px">
+            <a href="${esc(m.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f1f5f9;border-radius:8px;font-size:12px;font-weight:700;color:#0284c7;text-decoration:none">
+              🔗 Abrir Anexo / Link
+            </a>
+          </div>` : ''}
+        </div>
+
+        <div style="border-top:1px solid var(--line,#f1f5f9);padding-top:12px;display:flex;align-items:center;justify-content:space-between">
+          <button type="button" onclick="svModalComentarios('${m.id}', 'material')" style="background:none;border:none;color:var(--brand-blue,#3b82f6);font-size:12.5px;font-weight:700;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px">
+            💬 Comentários (${coms.length})
+          </button>
+
+          ${isTeacherOrAdmin ? `
+          <button type="button" onclick="svRemoverMaterial('${m.id}')" style="background:none;border:none;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;padding:0">
+            🗑️ Eliminar
+          </button>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* RENDER TAREFAS */
+function renderSvTarefas(list, isTeacherOrAdmin) {
+  if(list.length === 0) {
+    return `
+    <div class="card" style="padding:48px 24px;text-align:center;background:var(--surface,#fff);border-radius:16px;border:1px solid var(--line,#e2e8f0)">
+      <div style="font-size:48px;margin-bottom:12px">📝</div>
+      <h3 style="margin:0 0 6px 0;font-size:16px;color:var(--title-color,#0f172a)">Nenhuma tarefa atribuída</h3>
+      <p style="margin:0;font-size:13.5px;color:var(--text-muted,#64748b)">Não existem trabalhos ativos de casa ou testes marcados.</p>
+    </div>`;
+  }
+
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:16px">
+    ${list.map(t => {
+      const subs = (DB.salaSubmissoes || []).filter(s => s.tarefaId === t.id);
+      return `
+      <div class="card" style="padding:20px;background:var(--surface,#fff);border-radius:16px;border:1px solid var(--line,#e2e8f0);box-shadow:0 4px 12px rgba(0,0,0,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:14px">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800">${esc(t.disc)}</span>
+            <span style="font-size:11px;font-weight:700;color:#e11d48;background:#ffe4e6;padding:3px 8px;border-radius:6px">⏱️ Limite: ${esc(t.dataLimite || 'Sem prazo')}</span>
+          </div>
+
+          <h4 style="margin:0 0 6px 0;font-size:16px;font-weight:800;color:var(--title-color,#0f172a)">${esc(t.titulo)}</h4>
+          <p style="margin:0 0 10px 0;font-size:13px;color:var(--text-color,#334155);line-height:1.5">${esc(t.descricao || '')}</p>
+
+          <div style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;color:var(--text-muted,#64748b)">
+            <span>🎯 Cotação: ${t.cotacao || 20} val.</span>
+            <span>📥 Submissões: ${subs.length}</span>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--line,#f1f5f9);padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          ${isTeacherOrAdmin ? `
+          <button type="button" onclick="SVUI.tab='correcoes';render();" style="padding:7px 14px;border-radius:10px;background:#3b82f6;color:#fff;font-size:12.5px;font-weight:700;border:none;cursor:pointer">
+            📊 Corrigir & Classificar
+          </button>
+          <button type="button" onclick="svRemoverTarefa('${t.id}')" style="background:none;border:none;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer">
+            🗑️ Eliminar
+          </button>
+          ` : `
+          <button type="button" onclick="svModalSubmeterTrabalho('${t.id}')" style="padding:7px 14px;border-radius:10px;background:#10b981;color:#fff;font-size:12.5px;font-weight:700;border:none;cursor:pointer">
+            📤 Entregar Trabalho
+          </button>
+          `}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* RENDER CORREÇÕES & AVALIAÇÃO */
+function renderSvCorrecoes(curCls, tarefas) {
+  const db = DB;
+  const alunos = (db.alunos || []).filter(a => String(a.turmaId || a.clsId || a.turma) === String(curCls.id) || String(curCls.name).includes(String(a.turma)));
+
+  if(tarefas.length === 0) {
+    return `
+    <div class="card" style="padding:36px;text-align:center;background:var(--surface,#fff);border-radius:16px">
+      <p style="margin:0;font-size:14px;color:var(--text-muted,#64748b)">Crie primeiro uma tarefa no separador "Tarefas & Trabalhos" para poder avaliar os alunos.</p>
+    </div>`;
+  }
+
+  const selectedTarefaId = window.SVUI.selTarefaId || (tarefas[0] ? tarefas[0].id : null);
+  const curTarefa = tarefas.find(t => t.id === selectedTarefaId) || tarefas[0];
+
+  return `
+  <div class="card" style="padding:20px;background:var(--surface,#fff);border-radius:16px;border:1px solid var(--line,#e2e8f0);box-shadow:0 4px 12px rgba(0,0,0,0.03)">
+    
+    <!-- Tarefa Picker Header -->
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line,#e2e8f0)">
+      <div>
+        <label style="font-size:12px;font-weight:800;color:var(--text-muted,#64748b);display:block;margin-bottom:4px">SELECCIONAR TAREFA PARA CORRECÇÃO:</label>
+        <select onchange="SVUI.selTarefaId=this.value;render();" style="padding:9px 14px;border-radius:10px;border:1.5px solid var(--brand-blue,#3b82f6);font-size:14px;font-weight:700;color:var(--title-color,#0f172a);outline:none;background:var(--surface-2,#f8fafc)">
+          ${tarefas.map(t => `<option value="${t.id}" ${t.id === curTarefa.id ? 'selected' : ''}>${esc(t.titulo)} (Max: ${t.cotacao || 20}val)</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="text-align:right">
+        <span style="font-size:13px;font-weight:700;color:var(--brand-blue,#3b82f6)">Total de Alunos: ${alunos.length}</span>
+      </div>
+    </div>
+
+    <!-- Alunos Correction Table -->
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--line,#e2e8f0);text-align:left;color:var(--text-muted,#64748b)">
+            <th style="padding:10px">#</th>
+            <th style="padding:10px">Aluno</th>
+            <th style="padding:10px">Estado da Entrega</th>
+            <th style="padding:10px;width:120px">Nota (0-20)</th>
+            <th style="padding:10px">Feedback</th>
+            <th style="padding:10px;text-align:center">Ação Caderneta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${alunos.length === 0 ? `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted,#64748b)">Nenhum aluno registado nesta turma.</td></tr>` : 
+            alunos.map((a, idx) => {
+              const sub = (db.salaSubmissoes || []).find(s => s.tarefaId === curTarefa.id && String(s.alunoId) === String(a.id || a.numero));
+              const notaVal = sub ? (sub.nota !== undefined ? sub.nota : '') : '';
+              const feedbackVal = sub ? (sub.feedback || '') : '';
+              const isLaunched = sub ? sub.lancedOnCaderneta : false;
+
+              return `
+              <tr style="border-bottom:1px solid var(--line,#f1f5f9)">
+                <td style="padding:10px;font-weight:700;color:var(--text-muted,#64748b)">${idx + 1}</td>
+                <td style="padding:10px;font-weight:700;color:var(--title-color,#0f172a)">${esc(a.nome)}</td>
+                <td style="padding:10px">
+                  ${sub ? `
+                    <span style="background:#dcfce7;color:#15803d;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px">
+                      ✅ Entregue
+                    </span>
+                    ${sub.resposta ? `<div style="font-size:11px;color:var(--text-muted,#64748b);margin-top:2px">${esc(sub.resposta.substring(0,35))}...</div>` : ''}
+                  ` : `
+                    <span style="background:#fee2e2;color:#b91c1c;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:800">
+                      ⏳ Pendente
+                    </span>
+                  `}
+                </td>
+                <td style="padding:10px">
+                  <input type="number" min="0" max="20" step="0.5" value="${notaVal}" placeholder="0-20" onchange="svGravarNotaAluno('${curTarefa.id}', '${a.id || a.numero}', this.value)" style="width:70px;padding:6px 8px;border:1px solid var(--line,#cbd5e1);border-radius:8px;font-weight:800;text-align:center">
+                </td>
+                <td style="padding:10px">
+                  <input type="text" value="${esc(feedbackVal)}" placeholder="Observação..." onchange="svGravarFeedbackAluno('${curTarefa.id}', '${a.id || a.numero}', this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line,#cbd5e1);border-radius:8px;font-size:12px">
+                </td>
+                <td style="padding:10px;text-align:center">
+                  ${notaVal !== '' ? `
+                    <button type="button" onclick="svLancarCadernetaModal('${curTarefa.id}', '${a.id || a.numero}', ${notaVal})" style="padding:5px 10px;border-radius:8px;background:${isLaunched ? '#10b981' : '#3b82f6'};color:#fff;font-size:11px;font-weight:800;border:none;cursor:pointer">
+                      ${isLaunched ? '✓ Lançado' : '🚀 Lançar na ACS'}
+                    </button>
+                  ` : `<span style="font-size:11px;color:var(--text-muted,#94a3b8)">Insira a nota</span>`}
+                </td>
+              </tr>`;
+            }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* MODAIS & ACTIONS FOR SALA VIRTUAL */
+
+window.svModalNovoMaterial = function() {
+  const html = `
+  <div style="padding:4px">
+    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">📚 Novo Material Didático</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Título do Material *</label>
+        <input type="text" id="mat_titulo" placeholder="ex: Apontamentos de Física - Cinemática" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:600">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Descrição / Conteúdo *</label>
+        <textarea id="mat_desc" rows="4" placeholder="Escreva aqui as instruções ou resumo..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Link / Ficheiro Anexo (opcional)</label>
+        <input type="url" id="mat_link" placeholder="https://drive.google.com/..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px">
+      </div>
+      <div style="display:flex;justify-content:end;gap:10px;margin-top:10px">
+        <button class="btn sm" onclick="closeModal()">Cancelar</button>
+        <button class="btn sm primary" onclick="svGuardarMaterial()">Publicar Material</button>
+      </div>
+    </div>
+  </div>`;
+  openModal(html);
+};
+
+window.svGuardarMaterial = function() {
+  const titulo = $('#mat_titulo').value.trim();
+  const desc = $('#mat_desc').value.trim();
+  const link = $('#mat_link').value.trim();
+
+  if(!titulo || !desc) {
+    alert('Preencha o título e a descrição.');
+    return;
+  }
+
+  DB.salaMateriais = DB.salaMateriais || [];
+  DB.salaMateriais.unshift({
+    id: 'mat_' + Date.now(),
+    clsId: SVUI.cls,
+    disc: SVUI.disc,
+    tri: SVUI.tri,
+    titulo: titulo,
+    descricao: desc,
+    link: link,
+    data: new Date().toLocaleDateString('pt-PT')
+  });
+
+  saveData();
+  closeModal();
+  render();
+};
+
+window.svRemoverMaterial = function(id) {
+  if(!confirm('Tem certeza que deseja remover este material?')) return;
+  DB.salaMateriais = (DB.salaMateriais || []).filter(m => m.id !== id);
+  saveData();
+  render();
+};
+
+window.svModalNovaTarefa = function() {
+  const html = `
+  <div style="padding:4px">
+    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">📝 Nova Tarefa / Trabalho</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Título da Tarefa *</label>
+        <input type="text" id="tar_titulo" placeholder="ex: Resolução do Exercício 4 - Página 32" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:600">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Descrição & Requisitos *</label>
+        <textarea id="tar_desc" rows="4" placeholder="Descreva os problemas a resolver..." style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Data Limite de Entrega</label>
+          <input type="date" id="tar_data" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">Cotação Máxima (Valores)</label>
+          <input type="number" id="tar_cotacao" value="20" min="1" max="20" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-weight:800">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:end;gap:10px;margin-top:10px">
+        <button class="btn sm" onclick="closeModal()">Cancelar</button>
+        <button class="btn sm primary" style="background:#10b981" onclick="svGuardarTarefa()">Publicar Tarefa</button>
+      </div>
+    </div>
+  </div>`;
+  openModal(html);
+};
+
+window.svGuardarTarefa = function() {
+  const titulo = $('#tar_titulo').value.trim();
+  const desc = $('#tar_desc').value.trim();
+  const dataLim = $('#tar_data').value;
+  const cotacao = parseFloat($('#tar_cotacao').value) || 20;
+
+  if(!titulo || !desc) {
+    alert('Preencha o título e a descrição.');
+    return;
+  }
+
+  DB.salaTarefas = DB.salaTarefas || [];
+  DB.salaTarefas.unshift({
+    id: 'tar_' + Date.now(),
+    clsId: SVUI.cls,
+    disc: SVUI.disc,
+    tri: SVUI.tri,
+    titulo: titulo,
+    descricao: desc,
+    dataLimite: dataLim,
+    cotacao: cotacao
+  });
+
+  saveData();
+  closeModal();
+  render();
+};
+
+window.svRemoverTarefa = function(id) {
+  if(!confirm('Deseja eliminar esta tarefa e todas as submissões associadas?')) return;
+  DB.salaTarefas = (DB.salaTarefas || []).filter(t => t.id !== id);
+  DB.salaSubmissoes = (DB.salaSubmissoes || []).filter(s => s.tarefaId !== id);
+  saveData();
+  render();
+};
+
+window.svGravarNotaAluno = function(tarefaId, alunoId, nota) {
+  DB.salaSubmissoes = DB.salaSubmissoes || [];
+  let sub = DB.salaSubmissoes.find(s => s.tarefaId === tarefaId && String(s.alunoId) === String(alunoId));
+  if(!sub) {
+    sub = { id: 'sub_' + Date.now(), tarefaId: tarefaId, alunoId: alunoId, data: new Date().toLocaleDateString('pt-PT') };
+    DB.salaSubmissoes.push(sub);
+  }
+  sub.nota = parseFloat(nota);
+  saveData();
+};
+
+window.svGravarFeedbackAluno = function(tarefaId, alunoId, fb) {
+  DB.salaSubmissoes = DB.salaSubmissoes || [];
+  let sub = DB.salaSubmissoes.find(s => s.tarefaId === tarefaId && String(s.alunoId) === String(alunoId));
+  if(!sub) {
+    sub = { id: 'sub_' + Date.now(), tarefaId: tarefaId, alunoId: alunoId, data: new Date().toLocaleDateString('pt-PT') };
+    DB.salaSubmissoes.push(sub);
+  }
+  sub.feedback = fb;
+  saveData();
+};
+
+window.svLancarCadernetaModal = function(tarefaId, alunoId, notaVal) {
+  const html = `
+  <div style="padding:4px">
+    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">🚀 Lançar Nota na Caderneta</h3>
+    <p style="font-size:13.5px;color:var(--text-color,#334155)">Deseja transferir a nota <strong>${notaVal} val.</strong> desta tarefa para qual coluna de avaliação?</p>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0">
+      <button class="btn sm" onclick="svExecutarLancarCaderneta('${tarefaId}', '${alunoId}', ${notaVal}, 'a1')">ACS 1</button>
+      <button class="btn sm" onclick="svExecutarLancarCaderneta('${tarefaId}', '${alunoId}', ${notaVal}, 'a2')">ACS 2</button>
+      <button class="btn sm" onclick="svExecutarLancarCaderneta('${tarefaId}', '${alunoId}', ${notaVal}, 'a3')">ACS 3</button>
+      <button class="btn sm primary" onclick="svExecutarLancarCaderneta('${tarefaId}', '${alunoId}', ${notaVal}, 'at')">Avaliação Trimestral (AT)</button>
+    </div>
+  </div>`;
+  openModal(html);
+};
+
+window.svExecutarLancarCaderneta = function(tarefaId, alunoId, notaVal, colKey) {
+  const sub = (DB.salaSubmissoes || []).find(s => s.tarefaId === tarefaId && String(s.alunoId) === String(alunoId));
+  if(sub) sub.lancedOnCaderneta = true;
+
+  // Save into CAD_ITRIM_2026 or DB.cadernetas structure
+  const discName = SVUI.disc || 'Geral';
+  if(typeof CAD_ITRIM_2026 !== 'undefined' && CAD_ITRIM_2026[discName]) {
+    if(!CAD_ITRIM_2026[discName][colKey]) CAD_ITRIM_2026[discName][colKey] = {};
+    CAD_ITRIM_2026[discName][colKey][alunoId] = parseFloat(notaVal);
+  }
+
+  saveData();
+  closeModal();
+  alert(`Nota ${notaVal} lançada com sucesso na coluna ${colKey.toUpperCase()}!`);
+  render();
+};
+
+window.svModalComentarios = function(itemId, itemType) {
+  const coms = (DB.salaComentarios || []).filter(c => c.itemId === itemId);
+  const html = `
+  <div style="padding:4px">
+    <h3 style="margin-top:0;font-size:18px;font-weight:800;color:var(--title-color,#0f172a)">💬 Comentários & Dúvidas</h3>
+    
+    <div style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:12px 0;padding:8px;background:var(--surface-2,#f8fafc);border-radius:10px">
+      ${coms.length === 0 ? `<p style="font-size:12.5px;color:var(--text-muted,#64748b);margin:8px 0;text-align:center">Nenhum comentário registado.</p>` :
+        coms.map(c => `
+          <div style="background:#fff;padding:8px 12px;border-radius:8px;border:1px solid var(--line,#cbd5e1)">
+            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--brand-blue,#3b82f6)">
+              <span>${esc(c.autor || 'Utilizador')}</span>
+              <span>${esc(c.data || '')}</span>
+            </div>
+            <p style="margin:4px 0 0 0;font-size:12.5px;color:var(--title-color,#0f172a)">${esc(c.texto)}</p>
+          </div>
+        `).join('')}
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="sv_com_input" placeholder="Escreva uma dúvida ou resposta..." style="flex:1;padding:8px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:10px;font-size:13px">
+      <button class="btn sm primary" onclick="svGuardarComentario('${itemId}', '${itemType}')">Enviar</button>
+    </div>
+  </div>`;
+  openModal(html);
+};
+
+window.svGuardarComentario = function(itemId, itemType) {
+  const txt = $('#sv_com_input').value.trim();
+  if(!txt) return;
+
+  DB.salaComentarios = DB.salaComentarios || [];
+  DB.salaComentarios.push({
+    id: 'com_' + Date.now(),
+    itemId: itemId,
+    autor: currentUser ? (currentUser.nome || currentUser.user) : 'Utilizador',
+    texto: txt,
+    data: new Date().toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})
+  });
+
+  saveData();
+  closeModal();
+  svModalComentarios(itemId, itemType);
+};
