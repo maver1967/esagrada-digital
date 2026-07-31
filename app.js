@@ -10024,42 +10024,42 @@ VIEWS.salaVirtual = function(r) {
   r.innerHTML = `
   <div style="max-width:1200px;margin:0 auto;padding:16px 12px">
     
-    <!-- HERO HEADER -->
-    <div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);border-radius:20px;padding:24px;color:#fff;margin-bottom:20px;box-shadow:0 10px 25px -5px rgba(15,23,42,0.3);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.15)">
-      <div style="position:absolute;right:-20px;bottom:-20px;opacity:0.08;font-size:160px;line-height:1;pointer-events:none">🎓</div>
+    <!-- HERO HEADER WITH MAXIMUM CONTRAST -->
+    <div style="background:linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);border-radius:20px;padding:24px;color:#ffffff!important;margin-bottom:20px;box-shadow:0 10px 25px -5px rgba(15,23,42,0.3);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.2)">
+      <div style="position:absolute;right:-20px;bottom:-20px;opacity:0.1;font-size:160px;line-height:1;pointer-events:none">🎓</div>
       
       <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:2">
         <div>
-          <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:0.5px;color:#38bdf8;margin-bottom:8px">
+          <div style="display:inline-flex;align-items:center;gap:6px;background:#ffffff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:0.5px;color:#1e3a8a;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
             <span>SALAVIRTUAL &bull; LMS</span>
           </div>
-          <h2 style="font-size:26px;font-weight:800;margin:4px 0 6px 0;letter-spacing:-0.5px;color:#ffffff">
+          <h2 style="font-size:26px;font-weight:800;margin:4px 0 6px 0;letter-spacing:-0.5px;color:#ffffff!important">
             ${esc(clsName)} ${SVUI.disc ? '&bull; ' + esc(SVUI.disc) : ''}
           </h2>
-          <p style="margin:0;font-size:14px;color:#e2e8f0;font-weight:500;opacity:0.95">Espaço virtual de aprendizagem, tarefas e materiais didáticos</p>
+          <p style="margin:0;font-size:14px;color:#f1f5f9!important;font-weight:600;opacity:0.95">Espaço virtual de aprendizagem, tarefas e materiais didáticos</p>
         </div>
 
-        <!-- UNIFIED HIGH-CONTRAST FILTER BAR -->
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:rgba(15,23,42,0.7);padding:8px 12px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);backdrop-filter:blur(10px)">
+        <!-- CRISP HIGH-CONTRAST FILTER BAR -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#ffffff;padding:8px 12px;border-radius:14px;border:1px solid #cbd5e1;box-shadow:0 4px 15px rgba(0,0,0,0.15)">
           
-          <!-- Class Selector Button (Directly next to Trimesters) -->
-          <button type="button" onclick="selectClassModal(SVUI.cls, id => { SVUI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#ffffff;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s" title="Alterar Turma">
-            🏫 <span style="color:#ffffff">${esc(clsName)}</span> <span style="font-size:10px;opacity:0.8">▼</span>
+          <!-- Class Selector Button (Next to Trimesters) -->
+          <button type="button" onclick="selectClassModal(SVUI.cls, id => { SVUI.cls = id; render(); })" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a!important;font-size:13.5px;font-weight:800;cursor:pointer;transition:all 0.15s" title="Alterar Turma">
+            🏫 <span style="color:#0f172a!important;font-weight:800">${esc(clsName)}</span> <span style="font-size:10px;color:#475569">▼</span>
           </button>
 
           <!-- Subject Selector Dropdown -->
           ${discs.length > 0 ? `
           <div style="position:relative">
-            <select onchange="SVUI.disc=this.value;render();" style="appearance:none;-webkit-appearance:none;padding:8px 30px 8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#ffffff;font-size:13.5px;font-weight:800;cursor:pointer;outline:none">
-              ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''} style="background:#1e293b;color:#ffffff;font-weight:600">${esc(d)}</option>`).join('')}
+            <select onchange="SVUI.disc=this.value;render();" style="appearance:none;-webkit-appearance:none;padding:8px 30px 8px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a!important;font-size:13.5px;font-weight:800;cursor:pointer;outline:none">
+              ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''} style="background:#ffffff;color:#0f172a;font-weight:700">${esc(d)}</option>`).join('')}
             </select>
-            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#ffffff;font-size:10px">▼</span>
+            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#475569;font-size:10px">▼</span>
           </div>` : ''}
 
           <!-- Trimester Pills -->
-          <div style="display:inline-flex;background:rgba(0,0,0,0.35);padding:3px;border-radius:10px;border:1px solid rgba(255,255,255,0.2)">
+          <div style="display:inline-flex;background:#e2e8f0;padding:3px;border-radius:10px;border:1px solid #cbd5e1">
             ${['T1','T2','T3'].map(t => `
-              <button type="button" onclick="SVUI.tri='${t}';render();" style="padding:7px 13px;border-radius:8px;border:none;background:${SVUI.tri === t ? '#2563eb' : 'transparent'};color:${SVUI.tri === t ? '#ffffff' : '#cbd5e1'};font-size:13px;font-weight:800;cursor:pointer;transition:all 0.15s">
+              <button type="button" onclick="SVUI.tri='${t}';render();" style="padding:7px 13px;border-radius:8px;border:none;background:${SVUI.tri === t ? '#2563eb' : 'transparent'};color:${SVUI.tri === t ? '#ffffff!important' : '#1e293b!important'};font-size:13px;font-weight:800;cursor:pointer;transition:all 0.15s">
                 ${t === 'T1' ? '1º Trim' : t === 'T2' ? '2º Trim' : '3º Trim'}
               </button>
             `).join('')}
