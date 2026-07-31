@@ -6262,18 +6262,18 @@ const ROLES = {
 /* Quais voci do menu cada perfil vê. '*' = todas. */
 const ROLE_NAV = {
   direcao: '*',
-  diretor:   ['diario','planificacao','livropres','anag','classes','grid','tview','test','cadernetas','pautas','alunos','docs','transicao','arqanos','avisos'],
-  professor: ['diario','planificacao','grid','tview','test','cadernetas','alunos'],
+  diretor:   ['diario','planificacao','salaVirtual','livropres','anag','classes','grid','tview','test','cadernetas','pautas','alunos','docs','transicao','arqanos','avisos'],
+  professor: ['diario','planificacao','salaVirtual','grid','tview','test','cadernetas','alunos'],
   secretaria:['anag','teachers','cta','classes','trimestres','calendario','financa','docs','archive','arqanos','avisos'],
-  aluno:     ['mural','grid','alunos'],
+  aluno:     ['salaVirtual','mural','grid','alunos'],
   encarregado:['dash','mural','grid','alunos','financa'],
 };
 /* Rótulos adaptados ao perfil (o mesmo ecrã chama-se diferente conforme quem entra) */
 const ROLE_RELABEL = {
-  aluno:      {grid:'O meu horário', alunos:'As minhas notas', mural:'Avisos'},
+  aluno:      {grid:'O meu horário', alunos:'As minhas notas', mural:'Avisos', salaVirtual:'Sala Virtual'},
   encarregado:{dash:'Painel do educando', grid:'Horário do educando', alunos:'Notas do educando', financa:'Propinas', mural:'Avisos'},
-  professor:  {grid:'Os meus horários', tview:'O meu horário', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje'},
-  diretor:    {alunos:'Notas da turma', pautas:'Pautas da turma', diario:'Diário de Aula'},
+  professor:  {grid:'Os meus horários', tview:'O meu horário', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)'},
+  diretor:    {alunos:'Notas da turma', pautas:'Pautas da turma', diario:'Diário de Aula', salaVirtual:'Sala Virtual (LMS)'},
 };
 let PREVIEW_ROLE = 'direcao';
 function setRole(r){
