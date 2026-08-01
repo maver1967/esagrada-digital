@@ -72,7 +72,7 @@ async function syncPush(){
     await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acessos: DB.acessos||[], avisos: DB.avisos||[], ts: Date.now() })
+      body: JSON.stringify({ acessos: DB.acessos||[], avisos: DB.avisos||[], deletedAvisos: DB.deletedAvisos||[], ts: Date.now() })
     });
   } catch(e){}
 }
@@ -89,21 +89,39 @@ async function syncPull(){
     
     if(Array.isArray(remote.acessos) && remote.acessos.length > 0){
       if(!Array.isArray(DB.acessos)) DB.acessos = [];
-      const localIds = new Set(DB.acessos.map(x => x.id));
-      const newItems = remote.acessos.filter(x => !localIds.has(x.id));
+      const localIds = new Set(DB.acessos.map(x => String(x.id)));
+      const newItems = remote.acessos.filter(x => !localIds.has(String(x.id)));
       if(newItems.length > 0){
         DB.acessos = [...newItems, ...DB.acessos];
         updated = true;
       }
     }
     
+    if(Array.isArray(remote.deletedAvisos) && remote.deletedAvisos.length > 0){
+      if(!Array.isArray(DB.deletedAvisos)) DB.deletedAvisos = [];
+      remote.deletedAvisos.forEach(id => {
+        const sid = String(id);
+        if(!DB.deletedAvisos.includes(sid)) DB.deletedAvisos.push(sid);
+      });
+    }
+
     if(Array.isArray(remote.avisos) && remote.avisos.length > 0){
       if(!Array.isArray(DB.avisos)) DB.avisos = [];
-      const localAvIds = new Set(DB.avisos.map(x => x.id));
-      const newAvs = remote.avisos.filter(x => !localAvIds.has(x.id));
+      const localAvIds = new Set(DB.avisos.map(x => String(x.id)));
+      const delSet = new Set((DB.deletedAvisos || []).map(String));
+      const newAvs = remote.avisos.filter(x => !localAvIds.has(String(x.id)) && !delSet.has(String(x.id)));
       if(newAvs.length > 0){
         DB.avisos = [...newAvs, ...DB.avisos];
         updated = true;
+      }
+    }
+
+    if(Array.isArray(DB.deletedAvisos) && DB.deletedAvisos.length > 0){
+      const delSet = new Set(DB.deletedAvisos.map(String));
+      const lenBefore = DB.avisos ? DB.avisos.length : 0;
+      if(DB.avisos){
+        DB.avisos = DB.avisos.filter(a => !delSet.has(String(a.id)));
+        if(DB.avisos.length !== lenBefore) updated = true;
       }
     }
     
@@ -762,11 +780,12 @@ function periodRows(slots){
   return rows;
 }
 function allSlots(){ return [...DB.grid.morning,...DB.grid.afternoon]; }
+let _confirmOnYes = null;
 function confirmDel(msg,onYes){
+  _confirmOnYes = onYes;
   openModal(`<div class="modal-h"><h3>Confirmar</h3><button class="xbtn" onclick="closeModal()">${I.x}</button></div>
   <div class="modal-b"><p style="font-size:14px;line-height:1.6">${esc(msg)}</p></div>
-  <div class="modal-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn dng" id="cd">${I.trash} Eliminar</button></div>`);
-  $('#cd').onclick=()=>{ onYes(); closeModal(); };
+  <div class="modal-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn dng" onclick="if(_confirmOnYes){const fn=_confirmOnYes;_confirmOnYes=null;fn();}closeModal();">${I.trash} Eliminar</button></div>`);
 }
 function field(label,inner,hint){return `<div class="field"><label>${label}${hint?` <span class="hint">${hint}</span>`:''}</label>${inner}</div>`;}
 
@@ -1174,7 +1193,12 @@ const AV_CAT_SEED = [
 ];
 function ensureAvisos(){
   if(!Array.isArray(DB.avisos)) DB.avisos=[];
+  if(!Array.isArray(DB.deletedAvisos)) DB.deletedAvisos=[];
   if(!Array.isArray(DB.avisoCats) || !DB.avisoCats.length) DB.avisoCats = AV_CAT_SEED.map(c=>Object.assign({},c));
+  if(DB.deletedAvisos.length > 0){
+    const delSet = new Set(DB.deletedAvisos.map(String));
+    DB.avisos = DB.avisos.filter(a => !delSet.has(String(a.id)));
+  }
   return DB.avisos;
 }
 /* hex -> rgba claro (para o fundo da etiqueta) */
@@ -1267,7 +1291,12 @@ function avSave(obj){
   if(i>=0) DB.avisos[i]=obj; else DB.avisos.push(obj);
   persist();
 }
-function avDel(id){ ensureAvisos(); DB.avisos=DB.avisos.filter(a=>a.id!==id); persist(); }
+function avDel(id){
+  ensureAvisos();
+  if(!DB.deletedAvisos.includes(String(id))) DB.deletedAvisos.push(String(id));
+  DB.avisos=DB.avisos.filter(a=>a.id!==id && String(a.id)!==String(id));
+  persist();
+}
 function avTogglePin(id){ const a=DB.avisos.find(x=>x.id===id); if(a){a.pin=!a.pin; persist(); render();} }
 
 function avDuplicate(id){
@@ -1569,6 +1598,7 @@ VIEWS.avisos=function(r){
           </div>
           <div style="font-family:var(--sans);font-size:18px;font-weight:800;color:var(--title-color);line-height:1.35;margin-bottom:10px">${esc(a.titulo)}</div>
           <div style="font-size:14px;color:var(--text-color);line-height:1.6;white-space:pre-wrap">${esc(a.corpo)}</div>
+          ${avRenderCardAnexos(a)}
         </div>
       </div>
       
@@ -1652,6 +1682,125 @@ VIEWS.avisos=function(r){
   <div class="help" style="margin-top:20px;border-radius:14px">${I.info}<div>Publicando como <b>${esc(avAuthorLabel())}</b>. Clique no botão <b>👁️ Leitura</b> num card para ver quem confirmou ter tomado conhecimento.</div></div>`;
 };
 
+function avHandleFileUpload(files){
+  if(!files || !files.length) return;
+  AVFORM.anexos = AVFORM.anexos || [];
+  
+  const readPromises = [];
+  Array.from(files).forEach(file => {
+    if(file.size > 8 * 1024 * 1024){
+      toast(`O ficheiro ${file.name} excede o limite de 8 MB.`, true);
+      return;
+    }
+    const promise = new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let ext = file.name.split('.').pop().toLowerCase();
+        let catType = 'doc';
+        if(['png','jpg','jpeg','gif','webp','svg'].includes(ext)) catType = 'imagem';
+        else if(ext === 'pdf') catType = 'pdf';
+        else if(['xls','xlsx','csv'].includes(ext)) catType = 'excel';
+        else if(['doc','docx'].includes(ext)) catType = 'word';
+
+        let sizeFormatted = (file.size / 1024).toFixed(0) + ' KB';
+        if(file.size > 1024 * 1024){
+          sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        resolve({
+          id: 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          nome: file.name,
+          tipo: catType,
+          ext: ext,
+          tamanho: sizeFormatted,
+          dataUrl: e.target.result
+        });
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+    readPromises.push(promise);
+  });
+
+  Promise.all(readPromises).then(newAtts => {
+    const valid = newAtts.filter(Boolean);
+    if(valid.length){
+      AVFORM.anexos.push(...valid);
+      avRenderForm();
+      toast(`${valid.length} documento(s) anexado(s) ✓`);
+    }
+  });
+}
+
+function avRemoveAnexo(attId){
+  if(!AVFORM || !AVFORM.anexos) return;
+  AVFORM.anexos = AVFORM.anexos.filter(a => a.id !== attId);
+  avRenderForm();
+}
+
+function avRenderCardAnexos(a){
+  const anexos = a.anexos || [];
+  if(!anexos.length) return '';
+
+  const items = anexos.map(att => {
+    let icon = '📄';
+    if(att.tipo === 'pdf') icon = '📕';
+    else if(att.tipo === 'imagem') icon = '🖼️';
+    else if(att.tipo === 'excel') icon = '📊';
+    else if(att.tipo === 'word') icon = '📝';
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:10px;font-size:12.5px;margin-top:6px">
+      <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <span style="font-size:16px">${icon}</span>
+        <span style="font-weight:700;color:var(--title-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(att.nome)}">${esc(att.nome)}</span>
+        <span style="font-size:10.5px;color:var(--text-dim)">(${att.tamanho})</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${att.dataUrl ? `<button class="btn sm" onclick="avPreviewAnexo('${a.id}','${att.id}')" style="padding:3px 8px;font-size:11px;border-radius:6px;background:rgba(59,130,246,.12);color:var(--brand-blue);font-weight:700">👁️ Abrir</button>
+        <a class="btn sm" href="${att.dataUrl}" download="${esc(att.nome)}" style="padding:3px 8px;font-size:11px;border-radius:6px;background:var(--surface-3);color:var(--title-color);text-decoration:none;font-weight:700">📥 Descarregar</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border-color)">
+    <div style="font-size:11.5px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">📎 Documento(s) Anexado(s) (${anexos.length})</div>
+    ${items}
+  </div>`;
+}
+
+function avPreviewAnexo(avId, attId){
+  const aviso = DB.avisos.find(x => x.id === avId);
+  if(!aviso || !aviso.anexos) return;
+  const att = aviso.anexos.find(x => x.id === attId);
+  if(!att || !att.dataUrl) return;
+
+  if(att.tipo === 'imagem'){
+    openModal(`
+      <div class="modal-h">
+        <h3>${esc(att.nome)}</h3>
+        <button class="xbtn" onclick="closeModal()">${I.x}</button>
+      </div>
+      <div class="modal-b" style="text-align:center">
+        <img src="${att.dataUrl}" alt="${esc(att.nome)}" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:var(--shadow-md)">
+      </div>
+      <div class="modal-f">
+        <a class="btn pri" href="${att.dataUrl}" download="${esc(att.nome)}">📥 Descarregar (${att.tamanho})</a>
+      </div>
+    `);
+  } else {
+    const w = window.open();
+    if(w){
+      w.document.write(`<iframe src="${att.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+    } else {
+      toast('A descarregar ficheiro...', false);
+      const a = document.createElement('a');
+      a.href = att.dataUrl;
+      a.download = att.nome;
+      a.click();
+    }
+  }
+}
+
 /* —— Estado do formulário —— */
 let AVFORM=null;
 
@@ -1662,6 +1811,7 @@ function avOpenForm(id){
     const found = DB.avisos.find(x => x.id === id);
     if(found){
       AVFORM = Object.assign({}, found);
+      AVFORM.anexos = AVFORM.anexos || [];
       AVFORM.pAluno = (AVFORM.publico === 'ambos' || AVFORM.publico === 'aluno');
       AVFORM.pEnc = (AVFORM.publico === 'ambos' || AVFORM.publico === 'encarregado');
     }
@@ -1681,6 +1831,7 @@ function avOpenForm(id){
       categoria: 'geral',
       titulo: '',
       corpo: '',
+      anexos: [],
       validade: 0,
       pin: false,
       publico: 'ambos',
@@ -1869,6 +2020,32 @@ function avRenderForm(){
         <textarea id="av_corpo" rows="4" placeholder="Escreva aqui a mensagem detalhada do aviso…" oninput="AVFORM.corpo=this.value" style="resize:vertical;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border-color);width:100%;background:var(--card-bg);color:var(--title-color);font-size:14px;line-height:1.5">${esc(a.corpo)}</textarea>
       </div>
 
+      <!-- 5. DOCUMENTOS & ANEXOS -->
+      <div class="field">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">4. Documentos & Anexos</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input type="file" id="av_file_input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip" onchange="avHandleFileUpload(this.files)" style="display:none">
+          <button type="button" class="btn sm" onclick="document.getElementById('av_file_input').click()" style="border-radius:10px;padding:8px 14px;font-weight:700;background:var(--surface-2);border:1.5px dashed var(--brand-blue);color:var(--brand-blue)">
+            📎 Anexar Documento / Ficheiro
+          </button>
+          <span style="font-size:11.5px;color:var(--text-dim)">PDF, Word, Excel, Imagens (Máx. 8 MB)</span>
+        </div>
+        ${(a.anexos && a.anexos.length) ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${a.anexos.map(att => {
+          let icon = '📄';
+          if(att.tipo === 'pdf') icon = '📕';
+          else if(att.tipo === 'imagem') icon = '🖼️';
+          else if(att.tipo === 'excel') icon = '📊';
+          else if(att.tipo === 'word') icon = '📝';
+
+          return `<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:var(--surface-2);border:1.5px solid var(--border-color);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--title-color)">
+            <span>${icon}</span>
+            <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(att.nome)}">${esc(att.nome)}</span>
+            <span style="font-size:10.5px;color:var(--text-dim)">(${att.tamanho})</span>
+            <button type="button" onclick="avRemoveAnexo('${att.id}')" style="background:none;border:none;color:var(--brand-coral);cursor:pointer;font-size:14px;padding:0 2px;margin-left:4px" title="Remover">&times;</button>
+          </div>`;
+        }).join('')}</div>` : ''}
+      </div>
+
       <!-- 5. OPÇÕES (Validade & Pin) -->
       <div class="grid2" style="grid-template-columns:1fr 1fr;gap:12px;align-items:end">
         <div class="field">
@@ -1900,8 +2077,30 @@ function avCommit(){
   const rec=Object.assign({},a); delete rec.pAluno; delete rec.pEnc;
   avSave(rec); closeModal(); toast('Aviso publicado ✓'); render();
 }
-function avConfirmDel(id){ const a=DB.avisos.find(x=>x.id===id); if(!a)return;
-  confirmDel('Eliminar o aviso “'+a.titulo+'”? Esta ação não pode ser desfeita.',()=>{ avDel(id); toast('Aviso eliminado'); render(); }); }
+function avConfirmDel(id){
+  const a = DB.avisos.find(x => x.id === id);
+  if(!a) return;
+  openModal(`
+    <div class="modal-h">
+      <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:8px">🗑️ Eliminar Aviso</h3>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b" style="padding:16px 0">
+      <p style="font-size:14.5px;color:var(--title-color);line-height:1.5;margin:0 0 10px 0">
+        Tem a certeza que deseja eliminar o aviso <b>“${esc(a.titulo)}”</b>?
+      </p>
+      <p style="font-size:12.5px;color:var(--brand-coral,#ef4444);margin:0;font-weight:600">
+        ⚠️ Esta ação é irreversível e o comunicado deixará de estar visível para os utilizadores.
+      </p>
+    </div>
+    <div class="modal-f" style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="avDel('${a.id}');closeModal();toast('Aviso eliminado ✓');render()" style="background:var(--brand-coral,#ef4444);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-weight:700;cursor:pointer">
+        🗑️ Eliminar Definitivamente
+      </button>
+    </div>
+  `);
+}
 
 /* —— VISTA MURAL (encarregado / aluno / leitor) —— */
 function avMuralView(r){
@@ -1937,6 +2136,7 @@ function avMuralView(r){
         </div>
         <div style="font-family:var(--sans);font-size:20px;font-weight:800;color:var(--title-color);line-height:1.35;margin-bottom:10px">${esc(av.titulo)}</div>
         <div style="font-size:14.5px;color:var(--text-color);line-height:1.6;white-space:pre-wrap">${esc(av.corpo)}</div>
+        ${avRenderCardAnexos(av)}
         
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;border-top:1px solid var(--border-color);padding-top:14px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim)">
