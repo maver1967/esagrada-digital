@@ -8848,29 +8848,37 @@ VIEWS.diario=function(r){
   setSub('Presenças, tema e anotações');
   if(!DB.teachers.length){ r.innerHTML=`<div class="vhead"><h1>Diário de Aula</h1></div><div class="card"><div class="empty">${I.teach}<div>Crie primeiro os professores.</div></div></div>`; return; }
 
-  const activeTab = DIUI.tab || 'aula';
-  const isDT = PREVIEW_ROLE === 'diretor' || PREVIEW_ROLE === 'direcao';
+  const isDirecaoOrAdmin = ['direcao', 'admin'].includes(PREVIEW_ROLE);
+  const myDtTk = avDtTurma();
+  const isDT = isDirecaoOrAdmin || !!myDtTk;
+  const canSeeSumarios = isDirecaoOrAdmin || !!myDtTk;
 
-  const navTabs = `
+  let activeTab = DIUI.tab || 'aula';
+  if(activeTab === 'dt_painel' && !isDT) activeTab = 'aula';
+  if(activeTab === 'dt_sumarios' && !canSeeSumarios) activeTab = 'aula';
+
+  const navTabs = (isDT || canSeeSumarios) ? `
     <div style="display:flex;gap:10px;border-bottom:2px solid var(--line);margin-bottom:20px;padding-bottom:2px;overflow-x:auto">
       <button onclick="diSetTab('aula')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='aula'?'var(--navy)':'transparent'};color:${activeTab==='aula'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='aula'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
         <span style="font-size:16px">📖</span> Aula do Dia (Registo)
       </button>
+      ${isDT ? `
       <button onclick="diSetTab('dt_painel')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_painel'?'var(--navy)':'transparent'};color:${activeTab==='dt_painel'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_painel'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
-        <span style="font-size:16px">👔</span> Painel Director de Turma ${isDT?'<span style="background:var(--emerald);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700">DT</span>':''}
-      </button>
+        <span style="font-size:16px">👔</span> Painel Director de Turma ${myDtTk ? `<span style="background:var(--emerald);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700">DT ${myDtTk}</span>` : ''}
+      </button>` : ''}
+      ${canSeeSumarios ? `
       <button onclick="diSetTab('dt_sumarios')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_sumarios'?'var(--navy)':'transparent'};color:${activeTab==='dt_sumarios'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_sumarios'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
         <span style="font-size:16px">📊</span> Monitorização de Sumários
-      </button>
+      </button>` : ''}
     </div>
-  `;
+  ` : '';
 
-  if(activeTab === 'dt_painel'){
+  if(activeTab === 'dt_painel' && isDT){
     r.innerHTML = `<div class="vhead"><h1>Diário de Aula</h1><p>Painel do Director de Turma — Controlo de Assiduidade e Justificativos.</p></div>` + navTabs + renderDtPainelHtml();
     return;
   }
 
-  if(activeTab === 'dt_sumarios'){
+  if(activeTab === 'dt_sumarios' && canSeeSumarios){
     r.innerHTML = `<div class="vhead"><h1>Diário de Aula</h1><p>Monitorização de Sumários leccionados por disciplina.</p></div>` + navTabs + renderDtSumariosHtml();
     return;
   }
@@ -8921,13 +8929,14 @@ VIEWS.diario=function(r){
 
   if(!lessons.length){
     const monIso = lpMondayOf(data);
+    const dtBtn = isDT ? `<button class="btn gold" onclick="diSetTab('dt_painel')">👔 Ver Painel Director de Turma</button>` : '';
     r.innerHTML=head+`<div class="card card-p" style="text-align:center;padding:40px 20px">
       <div style="font-size:38px;margin-bottom:10px">📅</div>
       <h3 style="font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:6px">${dia ? `Sem aulas agendadas para ${esc(teacherLabel(getTeacher(tid)))} na ${esc(diaTxt.toLowerCase())}` : 'Dia sem aulas (fim-de-semana)'}</h3>
       <p style="color:var(--txt-dim);font-size:13px;max-width:500px;margin:0 auto 20px">No dia ${diFmtData(data)} (${diaTxt.toLowerCase()}) não há aulas registadas no horário para este professor.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <button class="btn pri" onclick="diSetData('${monIso}')">📅 Ver Aulas de Segunda-feira (${diFmtData(monIso)})</button>
-        <button class="btn gold" onclick="diSetTab('dt_painel')">👔 Ver Painel Director de Turma</button>
+        ${dtBtn}
       </div>
     </div>`;
     return;
