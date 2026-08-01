@@ -1670,8 +1670,15 @@ function avOpenForm(id){
 }
 function avFormSet(k,v){ AVFORM[k]=v; if(['canal','alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm(); }
 function avRenderForm(){
-  const a=AVFORM; const isDt=PREVIEW_ROLE==='diretor'; const dtTk=avDtTurma();
-  const tks=turmaKeys();
+  const a=AVFORM; const isDt=PREVIEW_ROLE==='diretor'; const isProf=PREVIEW_ROLE==='professor'; const dtTk=avDtTurma();
+  let tks=turmaKeys();
+  if(isProf){
+    const tid=currentTeacherId(); const st=tid?teacherStats(tid):null;
+    if(st && st.classes && st.classes.length){
+      tks=tks.filter(tk=>st.classes.includes(tk)||(NOTAS.turmas[tk]&&st.classes.includes(NOTAS.turmas[tk].classe)));
+    }
+  }
+  if(!tks.includes(a.tk)) a.tk = tks[0]||'';
   const cats=avCats();
   if(!cats.find(c=>c.id===a.categoria)) a.categoria = cats[0]?cats[0].id:'';
   const catPills=cats.map(v=>{ const on=a.categoria===v.id; const bg=avHexToRgba(v.c,.12);
