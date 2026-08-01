@@ -8533,27 +8533,33 @@ VIEWS.planificacao=function(r){
   setSub('Plano analítico, quinzenal e diário');
   if(!DB.teachers.length){ r.innerHTML=`<div class="vhead"><h1>Planificação</h1></div><div class="card"><div class="empty">${I.teach}<div>Crie primeiro os professores.</div></div></div>`; return; }
   const tid=currentTeacherId();
-  const teacherSelTop=`<select onchange="plSetTeacher(this.value)" style="padding:7px 9px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:600;max-width:230px">${DB.teachers.map(t=>`<option value="${t.id}" ${t.id===tid?'selected':''}>${esc(teacherLabel(t))}</option>`).join('')}</select>`;
+  const isDirecao = PREVIEW_ROLE === 'direcao';
+  const currentT = getTeacher(tid);
+
+  const teacherSelTop = isDirecao
+    ? `<select onchange="plSetTeacher(this.value)" style="padding:7px 9px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:600;max-width:230px;background:var(--bg-body);color:var(--txt);outline:none">${DB.teachers.map(t=>`<option value="${t.id}" ${t.id===tid?'selected':''}>${esc(teacherLabel(t))}</option>`).join('')}</select>`
+    : `<div style="padding:7px 12px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:700;background:var(--bg-body);color:var(--txt);display:flex;align-items:center;gap:6px">👤 ${esc(currentT ? teacherLabel(currentT) : 'Professor')} <span style="font-size:11px;color:var(--txt-dim);font-weight:600">🔒 (Conta Activa)</span></div>`;
+
   const pairs=plPairs(tid);
   if(!pairs.length){ r.innerHTML=`<div class="vhead"><h1>Planificação</h1></div>
-    <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px;margin-bottom:14px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#888;text-transform:uppercase">Professor</span>${teacherSelTop}</div>
-    <div class="card"><div class="empty">${I.clock}<div>${esc(teacherLabel(getTeacher(tid)))} não tem disciplinas atribuídas no horário.<br><span style="font-size:12px;color:#aaa">Escolha outro professor acima.</span></div></div></div>`; return; }
+    <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px;margin-bottom:14px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--txt-dim);text-transform:uppercase">Professor</span>${teacherSelTop}</div>
+    <div class="card"><div class="empty">${I.clock}<div>${esc(teacherLabel(getTeacher(tid)))} não tem disciplinas atribuídas no horário.${isDirecao?'<br><span style="font-size:12px;color:var(--txt-dim)">Escolha outro professor acima.</span>':''}</div></div></div>`; return; }
   if(!PLUI.pair || !pairs.some(p=>p.tk+'::'+p.disc===PLUI.pair)) PLUI.pair=pairs[0].tk+'::'+pairs[0].disc;
   const [tk,disc]=PLUI.pair.split('::');
   const key=plKey(tid,tk,disc);
   const T=ensureTrimestres(); const triObj=T.lista.find(x=>x.id===PLUI.tri)||T.lista[0]; PLUI.tri=triObj.id;
   const cls=NOTAS.turmas[tk]||{};
 
-  const teacherSel=`<select onchange="plSetTeacher(this.value)" style="padding:7px 9px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:600;max-width:230px">${DB.teachers.map(t=>`<option value="${t.id}" ${t.id===tid?'selected':''}>${esc(teacherLabel(t))}</option>`).join('')}</select>`;
-  const pairSel=`<select onchange="plSetPair(this.value)" style="padding:7px 9px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:600;max-width:300px">${pairs.map(p=>`<option value="${p.tk+'::'+p.disc}" ${(p.tk+'::'+p.disc)===PLUI.pair?'selected':''}>Turma ${esc(p.tk)} · ${esc(p.disc)}</option>`).join('')}</select>`;
+  const teacherSel = teacherSelTop;
+  const pairSel=`<select onchange="plSetPair(this.value)" style="padding:7px 9px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:600;max-width:300px;background:var(--bg-body);color:var(--txt);outline:none">${pairs.map(p=>`<option value="${p.tk+'::'+p.disc}" ${(p.tk+'::'+p.disc)===PLUI.pair?'selected':''}>Turma ${esc(p.tk)} · ${esc(p.disc)}</option>`).join('')}</select>`;
   const triBtns=T.lista.map(t=>`<button onclick="plSetTri('${t.id}')" class="btn sm ${t.id===PLUI.tri?'em':''}">${esc(t.nome)}</button>`).join('');
   const tabs=[['analitico','Plano Analítico'],['quinzenal','Plano Quinzenal'],['diario','Plano Diário']]
-    .map(([id,lab])=>`<button onclick="plSetTab('${id}')" style="background:none;border:none;border-bottom:2px solid ${PLUI.tab===id?'#26324a':'transparent'};color:${PLUI.tab===id?'#26324a':'#999'};font-weight:700;font-size:13.5px;padding:8px 4px;cursor:pointer">${lab}</button>`).join('');
+    .map(([id,lab])=>`<button onclick="plSetTab('${id}')" style="background:none;border:none;border-bottom:2px solid ${PLUI.tab===id?'var(--navy)':'transparent'};color:${PLUI.tab===id?'var(--navy)':'var(--txt-dim)'};font-weight:700;font-size:13.5px;padding:8px 4px;cursor:pointer">${lab}</button>`).join('');
 
   let head=`<div class="vhead"><h1>Planificação</h1><p>O professor recebe o programa do Ministério e elabora a sua planificação. Tudo parte do Plano Analítico.</p></div>
     <div class="card" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 16px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#888;text-transform:uppercase">Professor</span>${teacherSel}</div>
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#888;text-transform:uppercase">Disciplina</span>${pairSel}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--txt-dim);text-transform:uppercase">Professor</span>${teacherSel}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--txt-dim);text-transform:uppercase">Disciplina</span>${pairSel}</div>
       <div style="margin-left:auto;display:flex;gap:6px">${triBtns}</div>
     </div>
     <div style="display:flex;gap:18px;border-bottom:1px solid var(--line);margin-bottom:16px">${tabs}</div>`;
