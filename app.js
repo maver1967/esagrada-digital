@@ -1654,94 +1654,195 @@ VIEWS.avisos=function(r){
 
 /* —— Estado do formulário —— */
 let AVFORM=null;
-function avOpenForm(id){
-  ensureAvisos();
-  const ex = id? DB.avisos.find(a=>a.id===id) : null;
-  const isDt = PREVIEW_ROLE==='diretor';
-  const dtTk = avDtTurma();
-  AVFORM = ex ? Object.assign({},ex) : {
-    id:uid(), canal:'geral', disciplina:'', categoria:'geral', titulo:'', corpo:'',
-    alcance: isDt?'turma':'escola', tk: isDt?dtTk:(turmaKeys()[0]||''), cod:'',
-    pin:false, validade:0, publico:'ambos', autor:avAuthorLabel(), autorRole:avAuthorRole(), ts:0
-  };
-  AVFORM.publico=avPub(AVFORM);
-  Object.assign(AVFORM, avPubToFlags(AVFORM.publico));
+function avFormSet(k,v){
+  AVFORM[k]=v;
+  if(['canal','alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm();
+}
+
+function avGetDest(a){
+  if(a.alcance === 'aluno') return 'aluno';
+  if(a.alcance === 'turma') return 'turma';
+  if(a.canal === 'professores') return 'professores';
+  if(a.canal === 'encarregados') return 'encarregados';
+  return 'geral';
+}
+
+function avSetDest(dest){
+  if(dest === 'aluno'){ AVFORM.alcance='aluno'; AVFORM.canal='encarregados'; }
+  else if(dest === 'turma'){ AVFORM.alcance='turma'; AVFORM.canal='encarregados'; }
+  else if(dest === 'professores'){ AVFORM.alcance='escola'; AVFORM.canal='professores'; }
+  else if(dest === 'encarregados'){ AVFORM.alcance='escola'; AVFORM.canal='encarregados'; }
+  else { AVFORM.alcance='escola'; AVFORM.canal='geral'; }
   avRenderForm();
 }
-function avFormSet(k,v){ AVFORM[k]=v; if(['canal','alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm(); }
+
 function avRenderForm(){
-  const a=AVFORM; const isDt=PREVIEW_ROLE==='diretor'; const isProf=PREVIEW_ROLE==='professor'; const dtTk=avDtTurma();
-  let tks=turmaKeys();
+  const a = AVFORM;
+  const isDirecao = ['direcao','admin'].includes(PREVIEW_ROLE);
+  const isSec = PREVIEW_ROLE==='secretaria';
+  const isDt = PREVIEW_ROLE==='diretor';
+  const isProf = PREVIEW_ROLE==='professor';
+  const dtTk = avDtTurma();
+
+  let tks = turmaKeys();
   if(isProf){
-    const tid=currentTeacherId(); const st=tid?teacherStats(tid):null;
+    const tid = currentTeacherId();
+    const st = tid ? teacherStats(tid) : null;
     if(st && st.classes && st.classes.length){
-      tks=tks.filter(tk=>st.classes.includes(tk)||(NOTAS.turmas[tk]&&st.classes.includes(NOTAS.turmas[tk].classe)));
+      tks = tks.filter(tk => st.classes.includes(tk) || (NOTAS.turmas[tk] && st.classes.includes(NOTAS.turmas[tk].classe)));
     }
   }
-  if(!tks.includes(a.tk)) a.tk = tks[0]||'';
-  const cats=avCats();
-  if(!cats.find(c=>c.id===a.categoria)) a.categoria = cats[0]?cats[0].id:'';
-  const catPills=cats.map(v=>{ const on=a.categoria===v.id; const bg=avHexToRgba(v.c,.12);
-    return `<button onclick="avFormSet('categoria','${v.id}')" style="border:1.5px solid ${on?v.c:'var(--border-color)'};background:${on?bg:'var(--card-bg)'};color:${v.c};border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">${esc(v.label)}</button>`;
-  }).join('');
-  const gearSvg=I.cog.replace('<svg ','<svg width="16" height="16" ');
-  const gearBtn=`<button onclick="avCatsManage(true)" title="Gerir categorias" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px dashed var(--border-color);background:var(--card-bg);color:var(--text-soft);border-radius:10px;cursor:pointer;flex:0 0 auto;padding:0">${gearSvg}</button>`;
-  const catBtns=gearBtn+catPills;
-  
-  const alcanceOpt=(val,lab,dis)=>`<label style="display:flex;align-items:center;gap:7px;padding:9px 12px;border:1.5px solid ${a.alcance===val?'var(--brand-cyan)':'var(--border-color)'};border-radius:12px;cursor:${dis?'not-allowed':'pointer'};opacity:${dis?'.45':'1'};flex:1;min-width:120px;background:${a.alcance===val?'var(--surface-2)':'var(--card-bg)'}">
-    <input type="radio" name="avalc" ${a.alcance===val?'checked':''} ${dis?'disabled':''} onchange="avFormSet('alcance','${val}')"><span style="font-size:13px;font-weight:700;color:var(--title-color)">${lab}</span></label>`;
-  
-  const canalOpt=(val,lab,ic)=>`<label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid ${a.canal===val?'var(--brand-cyan)':'var(--border-color)'};border-radius:12px;cursor:pointer;flex:1;min-width:140px;background:${a.canal===val?'var(--surface-2)':'var(--card-bg)'}">
-    <input type="radio" name="avcanal" ${a.canal===val?'checked':''} onchange="avFormSet('canal','${val}')">
-    <span style="font-size:13px;font-weight:700;color:var(--title-color)">${ic} ${lab}</span></label>`;
+  if(!tks.includes(a.tk)) a.tk = isDt ? dtTk : (tks[0]||'');
 
-  let detalhe='';
-  if(a.alcance==='turma'){
-    if(isDt){ detalhe=`<div class="field"><label>Turma</label><div style="font-weight:700;color:var(--title-color);background:var(--surface-2);padding:9px 14px;border-radius:10px">${esc(dtTk)}</div></div>`; AVFORM.tk=dtTk; }
-    else detalhe=`<div class="field"><label>Turma Destino</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${a.tk===tk?'selected':''}>Turma ${esc(tk)} — ${esc(NOTAS.turmas[tk].classe)}</option>`).join('')}</select></div>`;
-  } else if(a.alcance==='aluno'){
-    const tkSel=isDt?dtTk:(a.tk||tks[0]); AVFORM.tk=tkSel;
-    const t=NOTAS.turmas[tkSel]; const studs=t?Object.keys(t.roster).sort((x,y)=>(t.roster[x].num||0)-(t.roster[y].num||0)):[];
-    detalhe=`<div class="grid2" style="grid-template-columns:1fr 1.4fr;gap:10px">
-      ${isDt?`<div class="field"><label>Turma</label><div style="font-weight:700;color:var(--title-color);background:var(--surface-2);padding:9px 14px;border-radius:10px">${esc(dtTk)}</div></div>`
-        :`<div class="field"><label>Turma</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${tkSel===tk?'selected':''}>Turma ${esc(tk)}</option>`).join('')}</select></div>`}
-      <div class="field"><label>Aluno</label><select onchange="avFormSet('cod',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">
-        <option value="">— escolher aluno —</option>
-        ${studs.map(c=>`<option value="${c}" ${a.cod===c?'selected':''}>${esc(t.roster[c].nome)}</option>`).join('')}</select></div>
+  const currDest = avGetDest(a);
+
+  // Define Destinatários options based on ROLE
+  let destOptions = [];
+  if(isDt){
+    destOptions = [
+      { id: 'turma', icon: '🏫', title: `Minha Turma (${dtTk||'DT'})`, desc: 'Todos os alunos e encarregados da turma' },
+      { id: 'aluno', icon: '👤', title: 'Um Aluno / Encarregado', desc: 'Mensagem/aviso individual para um estudante' },
+      { id: 'professores', icon: '👥', title: 'Conselho de Turma / Professores', desc: 'Mensagem interna para docentes da turma' }
+    ];
+  } else if(isProf){
+    destOptions = [
+      { id: 'turma', icon: '🏫', title: 'Uma das minhas Turmas', desc: 'Alunos e encarregados de uma turma leccionada' },
+      { id: 'aluno', icon: '👤', title: 'Um Aluno Específico', desc: 'Aviso directo a um estudante das suas turmas' },
+      { id: 'professores', icon: '👥', title: 'Sala dos Professores', desc: 'Mensagem interna para a comunidade docente' }
+    ];
+  } else {
+    // Direção & Secretaria
+    destOptions = [
+      { id: 'geral', icon: '📢', title: 'Mural Geral da Escola', desc: 'Visível para toda a comunidade escolar' },
+      { id: 'professores', icon: '👥', title: 'Sala dos Professores', desc: 'Circolares e avisos apenas para docentes' },
+      { id: 'encarregados', icon: '👪', title: 'Todos os Encarregados', desc: 'Comunicações gerais para encarregados' },
+      { id: 'turma', icon: '🏫', title: 'Uma Turma Específica', desc: 'Aviso dirigido aos alunos e encarregados de uma turma' },
+      { id: 'aluno', icon: '👤', title: 'Um Aluno Específico', desc: 'Notificação individualizada para o encarregado/aluno' }
+    ];
+  }
+
+  // If current dest is not available for current role, default to first option
+  if(!destOptions.find(o => o.id === currDest)){
+    avSetDest(destOptions[0].id);
+    return;
+  }
+
+  // Render Destination Cards
+  const destHtml = destOptions.map(opt => {
+    const sel = currDest === opt.id;
+    return `<div onclick="avSetDest('${opt.id}')" style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border:1.5px solid ${sel?'var(--brand-cyan)':'var(--border-color)'};border-radius:12px;background:${sel?'var(--surface-2)':'var(--card-bg)'};cursor:pointer;transition:all 0.15s ease;flex:1;min-width:200px">
+      <input type="radio" name="avdest" ${sel?'checked':''} style="margin-top:3px;cursor:pointer">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:${sel?'var(--brand-cyan)':'var(--title-color)'};display:flex;align-items:center;gap:6px">${opt.icon} ${opt.title}</div>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.3">${opt.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Sub-selection details panel (Turma / Aluno / Disciplina)
+  let subDetails = '';
+  if(currDest === 'turma'){
+    if(isDt){
+      subDetails = `<div style="background:rgba(59,130,246,0.08);border:1.5px solid rgba(59,130,246,0.25);padding:11px 16px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:13px;font-weight:700;color:var(--title-color)">Destino fixado:</span>
+        <span style="font-size:13px;font-weight:800;color:var(--brand-cyan);background:var(--card-bg);padding:4px 12px;border-radius:8px;border:1px solid var(--border-color)">🏫 Turma ${esc(dtTk)} (Sua Turma)</span>
+      </div>`;
+      AVFORM.tk = dtTk;
+    } else {
+      subDetails = `<div class="field"><label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Turma de Destino</label>
+        <select onchange="avFormSet('tk',this.value)" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600;font-size:13.5px">
+          ${tks.map(tk=>`<option value="${tk}" ${a.tk===tk?'selected':''}>Turma ${esc(tk)} — ${esc(NOTAS.turmas[tk]?NOTAS.turmas[tk].classe:'')}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+  } else if(currDest === 'aluno'){
+    const tkSel = isDt ? dtTk : (a.tk || tks[0]);
+    AVFORM.tk = tkSel;
+    const t = NOTAS.turmas[tkSel];
+    const studs = t ? Object.keys(t.roster).sort((x,y)=>(t.roster[x].num||0)-(t.roster[y].num||0)) : [];
+    subDetails = `<div class="grid2" style="grid-template-columns:${isDt?'1fr 2fr':'1fr 1fr'};gap:10px">
+      ${isDt ? `<div class="field"><label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Turma</label><div style="font-weight:700;color:var(--title-color);background:var(--surface-2);padding:10px 14px;border-radius:10px;border:1px solid var(--border-color)">Turma ${esc(dtTk)}</div></div>`
+        : `<div class="field"><label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Turma</label><select onchange="avFormSet('tk',this.value)" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${tkSel===tk?'selected':''}>Turma ${esc(tk)}</option>`).join('')}</select></div>`}
+      <div class="field"><label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Aluno Específico</label>
+        <select onchange="avFormSet('cod',this.value)" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">
+          <option value="">— Seleccione o Aluno —</option>
+          ${studs.map(c=>`<option value="${c}" ${a.cod===c?'selected':''}>${esc(t.roster[c].nome)}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  } else if(currDest === 'professores'){
+    subDetails = `<div class="field"><label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Grupo Disciplinar / Matéria <span class="hint">(opcional)</span></label>
+      <input value="${esc(a.disciplina||'')}" placeholder="Ex.: Filosofia, Matemática, Conselho de Turma…" oninput="AVFORM.disciplina=this.value" style="padding:10px 12px;border-radius:10px;border:1.5px solid var(--border-color);width:100%;background:var(--card-bg);color:var(--title-color)">
     </div>`;
   }
 
-  const validadeIso = a.validade?avTsToIso(a.validade):'';
+  // Categories
+  const cats = avCats();
+  if(!cats.find(c => c.id === a.categoria)) a.categoria = cats[0] ? cats[0].id : 'geral';
+  const catPills = cats.map(v => {
+    const on = a.categoria === v.id;
+    const bg = avHexToRgba(v.c, .12);
+    return `<button onclick="avFormSet('categoria','${v.id}')" style="border:1.5px solid ${on?v.c:'var(--border-color)'};background:${on?bg:'var(--card-bg)'};color:${v.c};border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">${esc(v.label)}</button>`;
+  }).join('');
+  const gearSvg = I.cog.replace('<svg ', '<svg width="15" height="15" ');
+  const gearBtn = `<button onclick="avCatsManage(true)" title="Gerir categorias" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px dashed var(--border-color);background:var(--card-bg);color:var(--text-soft);border-radius:10px;cursor:pointer;flex:0 0 auto;padding:0">${gearSvg}</button>`;
+
+  // Role Badge Title Header for Modal
+  const roleTitle = isDt ? 'Director de Turma' : isProf ? 'Docente' : isSec ? 'Secretaria' : 'Direcção';
+
+  const validadeIso = a.validade ? avTsToIso(a.validade) : '';
+
   openModal(`
-    <div class="modal-h"><h3>${a.ts?'Editar aviso':'Novo aviso'}</h3><button class="xbtn" onclick="closeModal()">${I.x}</button></div>
-    <div class="modal-b" style="display:flex;flex-direction:column;gap:14px">
-      <div class="field"><label>Canal de Comunicação</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${canalOpt('professores','Sala dos Professores','👥')}
-          ${canalOpt('encarregados','Encarregados de Educação','👪')}
-          ${canalOpt('geral','Mural Geral da Escola','📢')}
+    <div class="modal-h">
+      <div>
+        <h3 style="margin:0;font-size:18px">${a.ts ? 'Editar aviso' : 'Novo aviso'}</h3>
+        <span style="font-size:11.5px;color:var(--text-dim);font-weight:600">Publicação de Aviso · Perfil: ${roleTitle}</span>
+      </div>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    
+    <div class="modal-b" style="display:flex;flex-direction:column;gap:16px">
+      <!-- 1. DESTINATÁRIOS / CANAL (Single Unified Choice) -->
+      <div class="field">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px">1. Destinatários da Mensagem</label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:8px">
+          ${destHtml}
         </div>
       </div>
 
-      <div class="field"><label>Categoria</label><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">${catBtns}</div></div>
-      <div class="field"><label>Título do Aviso</label><input id="av_tit" value="${esc(a.titulo)}" maxlength="90" placeholder="Ex.: Convocatória para Conselho de Turma / Reunião" oninput="AVFORM.titulo=this.value" style="padding:10px 12px;border-radius:10px"></div>
-      <div class="field"><label>Conteúdo da Mensagem</label><textarea id="av_corpo" rows="4" placeholder="Escreva aqui o conteúdo do aviso…" oninput="AVFORM.corpo=this.value" style="resize:vertical;padding:10px 12px;border-radius:10px">${esc(a.corpo)}</textarea></div>
-      
-      <div class="field"><label>Alcance</label><div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${alcanceOpt('escola','Toda a escola',isDt)}
-        ${alcanceOpt('turma','Uma turma',false)}
-        ${alcanceOpt('aluno','Um aluno',false)}
-      </div></div>
-      ${detalhe}
+      <!-- 2. DETALHE DO DESTINO (Turma / Aluno / Disciplina) -->
+      ${subDetails}
 
-      ${a.canal==='professores'?`<div class="field"><label>Grupo Disciplinar / Matéria (opcional)</label><input value="${esc(a.disciplina||'')}" placeholder="Ex.: Filosofia, Matemática, Direção de Turma…" oninput="AVFORM.disciplina=this.value" style="padding:9px 12px;border-radius:10px"></div>`:''}
+      <!-- 3. CATEGORIA -->
+      <div class="field">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">2. Categoria</label>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">${gearBtn}${catPills}</div>
+      </div>
 
-      <div class="grid2" style="grid-template-columns:1fr 1fr;gap:10px;align-items:end">
-        <div class="field"><label>Válido até <span class="hint">(opcional)</span></label><input type="date" value="${validadeIso}" onchange="AVFORM.validade=this.value?avIsoToTs(this.value):0" style="padding:9px 12px;border-radius:10px"></div>
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--surface-2);border-radius:10px;border:1px solid var(--border-color)"><input type="checkbox" ${a.pin?'checked':''} onchange="AVFORM.pin=this.checked"><span style="font-size:13px;font-weight:700;color:var(--title-color)">📌 Fixar no topo</span></label>
+      <!-- 4. TÍTULO E MENSAGEM -->
+      <div class="field">
+        <label style="font-size:12px;font-weight:800;color:var(--title-color);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">3. Conteúdo do Aviso</label>
+        <input id="av_tit" value="${esc(a.titulo)}" maxlength="90" placeholder="Título sumário do aviso (ex: Reunião de Pais / Convocatória)" oninput="AVFORM.titulo=this.value" style="padding:11px 14px;border-radius:12px;border:1.5px solid var(--border-color);width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600;font-size:14px;margin-bottom:10px">
+        <textarea id="av_corpo" rows="4" placeholder="Escreva aqui a mensagem detalhada do aviso…" oninput="AVFORM.corpo=this.value" style="resize:vertical;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border-color);width:100%;background:var(--card-bg);color:var(--title-color);font-size:14px;line-height:1.5">${esc(a.corpo)}</textarea>
+      </div>
+
+      <!-- 5. OPÇÕES (Validade & Pin) -->
+      <div class="grid2" style="grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+        <div class="field">
+          <label style="font-size:12px;font-weight:700;color:var(--title-color);margin-bottom:4px;display:block">Válido até <span class="hint">(opcional)</span></label>
+          <input type="date" value="${validadeIso}" onchange="AVFORM.validade=this.value?avIsoToTs(this.value):0" style="padding:10px 12px;border-radius:10px;border:1.5px solid var(--border-color);width:100%;background:var(--card-bg);color:var(--title-color)">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;background:var(--surface-2);border-radius:10px;border:1.5px solid var(--border-color)">
+          <input type="checkbox" ${a.pin?'checked':''} onchange="AVFORM.pin=this.checked">
+          <span style="font-size:13px;font-weight:700;color:var(--title-color)">📌 Fixar no topo</span>
+        </label>
       </div>
     </div>
-    <div class="modal-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="avCommit()">${a.ts?'Guardar alterações':'Publicar aviso'}</button></div>`);
+
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn pri" onclick="avCommit()">${a.ts ? 'Guardar alterações' : 'Publicar aviso'}</button>
+  `);
 }
 function avCommit(){
   const a=AVFORM; a.titulo=(a.titulo||'').trim(); a.corpo=(a.corpo||'').trim();
