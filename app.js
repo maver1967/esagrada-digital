@@ -3360,16 +3360,16 @@ function renderLoginScreen() {
             <div id="loginRolePickerContainer"></div>
 
             <div class="form-group">
-              <label for="loginId" id="loginIdLabel">ID do Operador</label>
-              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.15)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
+              <label for="loginId" id="loginIdLabel" style="color:#e2e8f0!important;font-size:13px!important;font-weight:700!important;display:block!important;margin-bottom:6px!important">ID do Operador</label>
+              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.2)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
                 <span class="icon" style="position:static!important;transform:none!important;font-size:16px!important;margin-right:12px!important;flex-shrink:0!important">👤</span>
                 <input type="text" id="loginId" value="direcao" placeholder="ex: direcao, secretaria..." autocomplete="username" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
               </div>
             </div>
 
             <div class="form-group">
-              <label for="loginPass">Palavra-passe</label>
-              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.15)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
+              <label for="loginPass" style="color:#e2e8f0!important;font-size:13px!important;font-weight:700!important;display:block!important;margin-bottom:6px!important">Palavra-passe</label>
+              <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.2)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
                 <span class="icon" style="position:static!important;transform:none!important;font-size:16px!important;margin-right:12px!important;flex-shrink:0!important">🔒</span>
                 <input type="password" id="loginPass" placeholder="Introduza a sua palavra-passe" autocomplete="current-password" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
                 <button type="button" class="toggle-pass" onclick="togglePassVisibility('loginPass', this)" title="Mostrar/ocultar palavra-passe" style="position:static!important;transform:none!important;background:transparent!important;border:none!important;font-size:16px!important;margin-left:8px!important;padding:4px!important;cursor:pointer!important;flex-shrink:0!important">👁️</button>
@@ -3386,11 +3386,11 @@ function renderLoginScreen() {
         </div>
 
         <div class="login-footer">
-          <div class="test-pass-badge">
-            <span class="badge-icon">🔑</span>
+          <div class="test-pass-badge" style="background:rgba(234,179,8,0.15)!important;border:1px solid rgba(234,179,8,0.4)!important;border-radius:12px!important;padding:12px 14px!important;color:#fef08a!important;display:flex!important;align-items:flex-start!important;gap:10px!important;margin-bottom:14px!important">
+            <span class="badge-icon" style="font-size:18px!important">🔑</span>
             <div>
-              <b>Palavra-passe inicial de teste: <code>1234</code></b>
-              <div>Cada operador pode alterar a sua palavra-passe após entrar.</div>
+              <b style="color:#ffffff!important;font-size:13px!important">Palavra-passe inicial de teste: <code style="background:#f59e0b!important;color:#0f172a!important;padding:2px 8px!important;border-radius:6px!important;font-weight:800!important;font-size:13px!important">1234</code></b>
+              <div style="color:#fef08a!important;font-size:12px!important;margin-top:4px!important;font-weight:500!important">Cada operador pode alterar a sua palavra-passe após entrar.</div>
             </div>
           </div>
           <div class="login-school-sub" style="color:#cbd5e1!important;font-size:12px!important;font-weight:600!important;text-align:center!important">Escola Pré-Universitária Sagrada Família · Maxixe</div>
