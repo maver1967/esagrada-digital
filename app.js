@@ -3339,8 +3339,8 @@ function renderLoginScreen() {
           <div class="login-logo">
             <img src="${logo}" alt="ESAGRADA" onerror="this.src='./assets/default_logo.png'">
           </div>
-          <h2>ESAGRADA</h2>
-          <p>Plataforma Digital de Gestão Escolar</p>
+          <h2 style="color:#ffffff!important;font-size:28px!important;font-weight:800!important;letter-spacing:-0.5px!important;margin:0 0 4px!important;text-shadow:0 2px 4px rgba(0,0,0,0.4)!important">ESAGRADA</h2>
+          <p style="color:#cbd5e1!important;font-size:13.5px!important;font-weight:600!important;margin:0!important">Plataforma Digital de Gestão Escolar</p>
         </div>
 
         <div class="login-body">
@@ -3393,7 +3393,7 @@ function renderLoginScreen() {
               <div>Cada operador pode alterar a sua palavra-passe após entrar.</div>
             </div>
           </div>
-          <div class="login-school-sub">Escola Pré-Universitária Sagrada Família · Maxixe</div>
+          <div class="login-school-sub" style="color:#cbd5e1!important;font-size:12px!important;font-weight:600!important;text-align:center!important">Escola Pré-Universitária Sagrada Família · Maxixe</div>
         </div>
       </div>
     </div>
