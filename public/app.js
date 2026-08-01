@@ -72,7 +72,7 @@ async function syncPush(){
     await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acessos: DB.acessos||[], avisos: DB.avisos||[], ts: Date.now() })
+      body: JSON.stringify({ acessos: DB.acessos||[], avisos: DB.avisos||[], deletedAvisos: DB.deletedAvisos||[], ts: Date.now() })
     });
   } catch(e){}
 }
@@ -89,21 +89,39 @@ async function syncPull(){
     
     if(Array.isArray(remote.acessos) && remote.acessos.length > 0){
       if(!Array.isArray(DB.acessos)) DB.acessos = [];
-      const localIds = new Set(DB.acessos.map(x => x.id));
-      const newItems = remote.acessos.filter(x => !localIds.has(x.id));
+      const localIds = new Set(DB.acessos.map(x => String(x.id)));
+      const newItems = remote.acessos.filter(x => !localIds.has(String(x.id)));
       if(newItems.length > 0){
         DB.acessos = [...newItems, ...DB.acessos];
         updated = true;
       }
     }
     
+    if(Array.isArray(remote.deletedAvisos) && remote.deletedAvisos.length > 0){
+      if(!Array.isArray(DB.deletedAvisos)) DB.deletedAvisos = [];
+      remote.deletedAvisos.forEach(id => {
+        const sid = String(id);
+        if(!DB.deletedAvisos.includes(sid)) DB.deletedAvisos.push(sid);
+      });
+    }
+
     if(Array.isArray(remote.avisos) && remote.avisos.length > 0){
       if(!Array.isArray(DB.avisos)) DB.avisos = [];
-      const localAvIds = new Set(DB.avisos.map(x => x.id));
-      const newAvs = remote.avisos.filter(x => !localAvIds.has(x.id));
+      const localAvIds = new Set(DB.avisos.map(x => String(x.id)));
+      const delSet = new Set((DB.deletedAvisos || []).map(String));
+      const newAvs = remote.avisos.filter(x => !localAvIds.has(String(x.id)) && !delSet.has(String(x.id)));
       if(newAvs.length > 0){
         DB.avisos = [...newAvs, ...DB.avisos];
         updated = true;
+      }
+    }
+
+    if(Array.isArray(DB.deletedAvisos) && DB.deletedAvisos.length > 0){
+      const delSet = new Set(DB.deletedAvisos.map(String));
+      const lenBefore = DB.avisos ? DB.avisos.length : 0;
+      if(DB.avisos){
+        DB.avisos = DB.avisos.filter(a => !delSet.has(String(a.id)));
+        if(DB.avisos.length !== lenBefore) updated = true;
       }
     }
     
@@ -762,11 +780,12 @@ function periodRows(slots){
   return rows;
 }
 function allSlots(){ return [...DB.grid.morning,...DB.grid.afternoon]; }
+let _confirmOnYes = null;
 function confirmDel(msg,onYes){
+  _confirmOnYes = onYes;
   openModal(`<div class="modal-h"><h3>Confirmar</h3><button class="xbtn" onclick="closeModal()">${I.x}</button></div>
   <div class="modal-b"><p style="font-size:14px;line-height:1.6">${esc(msg)}</p></div>
-  <div class="modal-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn dng" id="cd">${I.trash} Eliminar</button></div>`);
-  $('#cd').onclick=()=>{ onYes(); closeModal(); };
+  <div class="modal-f"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn dng" onclick="if(_confirmOnYes){const fn=_confirmOnYes;_confirmOnYes=null;fn();}closeModal();">${I.trash} Eliminar</button></div>`);
 }
 function field(label,inner,hint){return `<div class="field"><label>${label}${hint?` <span class="hint">${hint}</span>`:''}</label>${inner}</div>`;}
 
@@ -1174,7 +1193,12 @@ const AV_CAT_SEED = [
 ];
 function ensureAvisos(){
   if(!Array.isArray(DB.avisos)) DB.avisos=[];
+  if(!Array.isArray(DB.deletedAvisos)) DB.deletedAvisos=[];
   if(!Array.isArray(DB.avisoCats) || !DB.avisoCats.length) DB.avisoCats = AV_CAT_SEED.map(c=>Object.assign({},c));
+  if(DB.deletedAvisos.length > 0){
+    const delSet = new Set(DB.deletedAvisos.map(String));
+    DB.avisos = DB.avisos.filter(a => !delSet.has(String(a.id)));
+  }
   return DB.avisos;
 }
 /* hex -> rgba claro (para o fundo da etiqueta) */
@@ -1267,7 +1291,12 @@ function avSave(obj){
   if(i>=0) DB.avisos[i]=obj; else DB.avisos.push(obj);
   persist();
 }
-function avDel(id){ ensureAvisos(); DB.avisos=DB.avisos.filter(a=>a.id!==id); persist(); }
+function avDel(id){
+  ensureAvisos();
+  if(!DB.deletedAvisos.includes(String(id))) DB.deletedAvisos.push(String(id));
+  DB.avisos=DB.avisos.filter(a=>a.id!==id && String(a.id)!==String(id));
+  persist();
+}
 function avTogglePin(id){ const a=DB.avisos.find(x=>x.id===id); if(a){a.pin=!a.pin; persist(); render();} }
 
 function avDuplicate(id){
@@ -2048,8 +2077,30 @@ function avCommit(){
   const rec=Object.assign({},a); delete rec.pAluno; delete rec.pEnc;
   avSave(rec); closeModal(); toast('Aviso publicado ✓'); render();
 }
-function avConfirmDel(id){ const a=DB.avisos.find(x=>x.id===id); if(!a)return;
-  confirmDel('Eliminar o aviso “'+a.titulo+'”? Esta ação não pode ser desfeita.',()=>{ avDel(id); toast('Aviso eliminado'); render(); }); }
+function avConfirmDel(id){
+  const a = DB.avisos.find(x => x.id === id);
+  if(!a) return;
+  openModal(`
+    <div class="modal-h">
+      <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:8px">🗑️ Eliminar Aviso</h3>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b" style="padding:16px 0">
+      <p style="font-size:14.5px;color:var(--title-color);line-height:1.5;margin:0 0 10px 0">
+        Tem a certeza que deseja eliminar o aviso <b>“${esc(a.titulo)}”</b>?
+      </p>
+      <p style="font-size:12.5px;color:var(--brand-coral,#ef4444);margin:0;font-weight:600">
+        ⚠️ Esta ação é irreversível e o comunicado deixará de estar visível para os utilizadores.
+      </p>
+    </div>
+    <div class="modal-f" style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="avDel('${a.id}');closeModal();toast('Aviso eliminado ✓');render()" style="background:var(--brand-coral,#ef4444);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-weight:700;cursor:pointer">
+        🗑️ Eliminar Definitivamente
+      </button>
+    </div>
+  `);
+}
 
 /* —— VISTA MURAL (encarregado / aluno / leitor) —— */
 function avMuralView(r){
