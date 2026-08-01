@@ -1157,11 +1157,12 @@ function encDashView(r){
 /* Categorias padrão — só usadas na primeira vez para semear DB.avisoCats.
    Depois passam a ser totalmente editáveis pelo utilizador. */
 const AV_CAT_SEED = [
-  {id:'geral',     label:'Geral',     c:'#2155b8'},
-  {id:'evento',    label:'Evento',    c:'#0e7d52'},
-  {id:'pagamento', label:'Pagamento', c:'#b35309'},
-  {id:'urgente',   label:'Urgente',   c:'#a8231b'},
-  {id:'academico', label:'Académico', c:'#6d3fb0'},
+  {id:'geral',     label:'Geral',                  c:'#2155b8'},
+  {id:'urgente',   label:'Urgente / Convocatória',   c:'#a8231b'},
+  {id:'reuniao',   label:'Reunião de Pais',        c:'#0e7d52'},
+  {id:'disciplina',label:'Grupo Disciplinar',      c:'#6d3fb0'},
+  {id:'circular',  label:'Circular Interna',       c:'#b35309'},
+  {id:'evento',    label:'Evento / Cultura',       c:'#0a7d8c'},
 ];
 function ensureAvisos(){
   if(!Array.isArray(DB.avisos)) DB.avisos=[];
@@ -1175,6 +1176,13 @@ function avHexToRgba(hex,al){ hex=(hex||'#2155b8').replace('#',''); if(hex.lengt
 function avCats(){ ensureAvisos(); return DB.avisoCats; }
 function avCat(k){ const c=avCats().find(x=>x.id===k); if(c) return {label:c.label,c:c.c,bg:avHexToRgba(c.c,.12)};
   return {label:'Geral',c:'#667',bg:'#eef1f6'}; }
+
+function avCanalLabel(c){
+  if(c==='professores') return '👥 Sala dos Professores';
+  if(c==='encarregados') return '👪 Encarregados de Educação';
+  return '📢 Mural Geral';
+}
+
 /* Quem é o autor — depende do perfil em pré-visualização */
 function avAuthorLabel(){
   if(PREVIEW_ROLE==='secretaria') return 'Secretaria';
@@ -1220,8 +1228,10 @@ function avActivo(a){ return !a.validade || a.validade>=avNow(); }
 /* Texto de alcance legível */
 function avAlcanceLabel(a){
   if(a.alcance==='escola') return 'Toda a escola';
+  if(a.alcance==='professores') return 'Toda a Sala dos Professores';
   if(a.alcance==='turma')  return 'Turma '+(a.tk||'');
   if(a.alcance==='aluno'){ const t=NOTAS.turmas[a.tk]; const nm=t&&t.roster[a.cod]?t.roster[a.cod].nome:(a.cod||''); return (nm||'Aluno')+' ('+(a.tk||'')+')'; }
+  if(a.disciplina) return 'Disciplina: '+a.disciplina;
   return '';
 }
 /* Filtro: avisos que um dado aluno (tk,cod) deve ver */
@@ -1231,10 +1241,11 @@ function avPubToFlags(p){ p=p||'ambos'; return {pAluno:(p==='ambos'||p==='aluno'
 function avFlagsToPub(pAluno,pEnc){ if(pAluno&&pEnc)return'ambos'; if(pAluno)return'aluno'; if(pEnc)return'encarregado'; return''; }
 function avPubVisivel(a,aud){ if(!aud)return true; const p=avPub(a); return p==='ambos'||p===aud; }
 function avPubLabel(p){ p=p||'ambos'; return p==='aluno'?'só aluno':p==='encarregado'?'só encarregado':'aluno + encarregado'; }
-/* aud: 'aluno' | 'encarregado' | null (null = sem filtro de público) */
+
 function avForStudent(tk,cod,aud){
   return ensureAvisos().filter(a=> avActivo(a) && avPubVisivel(a,aud) && (
     a.alcance==='escola' ||
+    (a.canal==='geral') ||
     (a.alcance==='turma' && a.tk===tk) ||
     (a.alcance==='aluno' && a.tk===tk && a.cod===cod)
   )).sort(avSort);
@@ -1251,24 +1262,23 @@ function avSave(obj){
 function avDel(id){ ensureAvisos(); DB.avisos=DB.avisos.filter(a=>a.id!==id); persist(); }
 function avTogglePin(id){ const a=DB.avisos.find(x=>x.id===id); if(a){a.pin=!a.pin; persist(); render();} }
 
-/* —— Duplicar um aviso (cria novo, pré-preenchido, para mudar 1 dado) —— */
 function avDuplicate(id){
   ensureAvisos();
   const o=DB.avisos.find(a=>a.id===id); if(!o) return;
   const isDt=PREVIEW_ROLE==='diretor';
   AVFORM={
-    id:uid(),
+    id:uid(), canal:o.canal||'geral', disciplina:o.disciplina||'',
     categoria:o.categoria, titulo:o.titulo, corpo:o.corpo,
     alcance:o.alcance, tk:o.tk, cod:o.cod,
     pin:!!o.pin, validade:o.validade||0, publico:avPub(o),
-    autor:avAuthorLabel(), autorRole:avAuthorRole(), ts:0   /* ts=0 → trata-se de NOVO aviso */
+    autor:avAuthorLabel(), autorRole:avAuthorRole(), ts:0
   };
   Object.assign(AVFORM, avPubToFlags(AVFORM.publico));
   if(isDt){ AVFORM.tk=avDtTurma(); if(AVFORM.alcance==='escola') AVFORM.alcance='turma'; }
   avRenderForm();
 }
 
-/* —— Gestão de CATEGORIAS (etiqueta + cor, à escolha do utilizador) —— */
+/* —— Gestão de CATEGORIAS —— */
 const PALETA = ['#2155b8','#0e7d52','#b35309','#a8231b','#6d3fb0','#0a7d8c','#9a1f63','#41607a','#7a6a17','#444b57'];
 let CATFORM=null, CAT_FROM_FORM=false;
 function avCatsManage(fromForm){ CAT_FROM_FORM=!!fromForm; CATFORM={editId:null,label:'',c:PALETA[0]}; avCatsRender(); }
@@ -1325,7 +1335,7 @@ function avCatDel(id){
 }
 
 /* —— Estado da UI (gestão) —— */
-const AVUI = { filtro:'todos', q:'', cat:'', tk:'' };
+const AVUI = { canal:'todos', filtro:'todos', q:'', cat:'', tk:'' };
 
 function avShareWhatsApp(id){
   const a = DB.avisos.find(x=>x.id===id);
@@ -1361,7 +1371,7 @@ function avShareWhatsApp(id){
   `);
 }
 
-/* —— Reações e utilitários do Mural —— */
+/* —— Confirmações de Leitura & Reações —— */
 function ensureAvisoReactions(){
   if(!DB.avisoReactions) DB.avisoReactions = {};
   return DB.avisoReactions;
@@ -1369,7 +1379,7 @@ function ensureAvisoReactions(){
 
 function avToggleReaction(id, type){
   ensureAvisoReactions();
-  if(!DB.avisoReactions[id]) DB.avisoReactions[id] = { like: 0, ciente: 0, users: {} };
+  if(!DB.avisoReactions[id]) DB.avisoReactions[id] = { like: 0, ciente: 0, users: {}, readReceipts: {} };
   const r = DB.avisoReactions[id];
   const userKey = (PREVIEW_STUD && PREVIEW_STUD.cod) ? PREVIEW_STUD.cod : (PREVIEW_ROLE || 'gestor');
   const curr = r.users[userKey];
@@ -1383,6 +1393,104 @@ function avToggleReaction(id, type){
   }
   persist();
   render();
+}
+
+function avToggleReadReceipt(id){
+  ensureAvisoReactions();
+  if(!DB.avisoReactions[id]) DB.avisoReactions[id] = { like: 0, ciente: 0, users: {}, readReceipts: {} };
+  const r = DB.avisoReactions[id];
+  if(!r.readReceipts) r.readReceipts = {};
+  
+  let uKey = 'gestor';
+  let uName = 'Direção';
+  let uRole = PREVIEW_ROLE || 'gestor';
+
+  if (PREVIEW_STUD && PREVIEW_STUD.cod && NOTAS.turmas[PREVIEW_STUD.tk] && NOTAS.turmas[PREVIEW_STUD.tk].roster[PREVIEW_STUD.cod]) {
+    uKey = PREVIEW_STUD.cod;
+    uName = NOTAS.turmas[PREVIEW_STUD.tk].roster[PREVIEW_STUD.cod].nome || 'Encarregado/Aluno';
+    uRole = PREVIEW_ROLE === 'encarregado' ? 'Encarregado' : 'Estudante';
+  } else if (typeof AUTH_USER !== 'undefined' && AUTH_USER && AUTH_USER.nome) {
+    uKey = AUTH_USER.id || AUTH_USER.nome;
+    uName = AUTH_USER.nome;
+    uRole = AUTH_USER.role || PREVIEW_ROLE;
+  } else {
+    const tid = typeof currentTeacherId === 'function' ? currentTeacherId() : '';
+    const tObj = typeof getTeacher === 'function' ? getTeacher(tid) : null;
+    if (tObj) {
+      uKey = tObj.id;
+      uName = teacherLabel(tObj);
+      uRole = 'Professor';
+    }
+  }
+
+  if (r.readReceipts[uKey]) {
+    delete r.readReceipts[uKey];
+    toast('Confirmação de leitura removida');
+  } else {
+    r.readReceipts[uKey] = { ts: Date.now(), name: uName, role: uRole };
+    toast('✅ Declarado Visto / Tomou Conhecimento!');
+  }
+  persist();
+  render();
+}
+
+function avGetReadReceipts(id){
+  ensureAvisoReactions();
+  const r = DB.avisoReactions[id] || {};
+  const rr = r.readReceipts || {};
+  const list = Object.entries(rr).map(([k, v]) => ({ key: k, name: v.name, role: v.role, ts: v.ts }));
+  list.sort((a,b) => b.ts - a.ts);
+  return list;
+}
+
+function avOpenReadReceiptsModal(id){
+  const a = DB.avisos.find(x => x.id === id);
+  if(!a) return;
+  const receipts = avGetReadReceipts(id);
+  
+  let targetTotal = 0;
+  if(a.alcance === 'turma' && a.tk && NOTAS.turmas[a.tk]){
+    targetTotal = Object.keys(NOTAS.turmas[a.tk].roster||{}).length;
+  } else if(a.alcance === 'escola') {
+    targetTotal = Object.values(NOTAS.turmas||{}).reduce((acc, t) => acc + Object.keys(t.roster||{}).length, 0);
+  }
+
+  const perc = targetTotal > 0 ? Math.round((receipts.length / targetTotal) * 100) : 0;
+
+  const listRows = receipts.length > 0 ? receipts.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border-color)">
+      <div>
+        <div style="font-weight:700;font-size:13.5px;color:var(--title-color)">${esc(r.name)}</div>
+        <div style="font-size:11.5px;color:var(--text-dim)">${esc(r.role || 'Encarregado')}</div>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--brand-emerald);background:rgba(16,185,129,.12);padding:4px 10px;border-radius:999px">
+        ✓ ${avFmtLong(r.ts)}
+      </div>
+    </div>
+  `).join('') : `<div class="empty" style="padding:20px">${I.info}<div>Nenhuma confirmação de leitura registada ainda.</div></div>`;
+
+  openModal(`
+    <div class="modal-h">
+      <h3>👁️ Presa de Conhecimento / Leituras</h3>
+      <button class="xbtn" onclick="closeModal()">${I.x}</button>
+    </div>
+    <div class="modal-b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:var(--surface-2);padding:14px 16px;border-radius:14px;border:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:11px;font-weight:800;color:var(--text-dim);text-transform:uppercase">Aviso</div>
+          <div style="font-weight:800;font-size:15px;color:var(--title-color)">${esc(a.titulo)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;color:var(--brand-emerald)">${receipts.length}${targetTotal ? ` <span style="font-size:14px;color:var(--text-dim)">/ ${targetTotal} (${perc}%)</span>` : ''}</div>
+          <div style="font-size:11px;color:var(--text-dim)">Leituras confirmadas</div>
+        </div>
+      </div>
+      <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border-color);border-radius:14px">
+        ${listRows}
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn" onclick="closeModal()">Fechar</button></div>
+  `);
 }
 
 function avTimeAgo(ts){
@@ -1408,16 +1516,28 @@ VIEWS.avisos=function(r){
   const all=[...DB.avisos].sort(avSort);
   const f=AVUI.filtro;
   let list = f==='todos'?all : f==='ativos'?all.filter(avActivo) : f==='pin'?all.filter(a=>a.pin) : all.filter(a=>a.alcance===f);
-  const counts={ todos:all.length, ativos:all.filter(avActivo).length, escola:all.filter(a=>a.alcance==='escola').length, turma:all.filter(a=>a.alcance==='turma').length, aluno:all.filter(a=>a.alcance==='aluno').length, pin:all.filter(a=>a.pin).length };
+  
+  if(AVUI.canal && AVUI.canal !== 'todos'){
+    list = list.filter(a => (a.canal || 'geral') === AVUI.canal);
+  }
+
+  const counts={
+    todos:all.length,
+    professores:all.filter(a=>(a.canal==='professores')).length,
+    encarregados:all.filter(a=>(a.canal==='encarregados')).length,
+    geral:all.filter(a=>(!a.canal||a.canal==='geral')).length,
+    ativos:all.filter(avActivo).length,
+    pin:all.filter(a=>a.pin).length
+  };
   
   const qn=norm(AVUI.q);
   if(AVUI.cat) list=list.filter(a=>a.categoria===AVUI.cat);
   if(AVUI.tk)  list=list.filter(a=>a.tk===AVUI.tk);
   if(qn) list=list.filter(a=>{
-    const hay=[a.titulo,a.corpo,a.autor,avAlcanceLabel(a),avCat(a.categoria).label].map(norm).join(' ');
+    const hay=[a.titulo,a.corpo,a.autor,avAlcanceLabel(a),avCat(a.categoria).label,avCanalLabel(a.canal)].map(norm).join(' ');
     return qn.split(/\s+/).every(w=>hay.includes(w));
   });
-  const refinado=!!(AVUI.cat||AVUI.tk||qn);
+  const refinado=!!(AVUI.cat||AVUI.tk||qn||(AVUI.canal&&AVUI.canal!=='todos'));
   
   const stat=(lab,n,key)=>`<button class="btn sm ${f===key?'pri':'ghost'}" onclick="AVUI.filtro='${key}';render()" style="border-radius:20px;padding:6px 14px;font-weight:700;font-size:12.5px">${lab} <span style="background:rgba(255,255,255,.2);padding:2px 7px;border-radius:10px;margin-left:4px;font-size:11px">${n}</span></button>`;
   
@@ -1426,6 +1546,7 @@ VIEWS.avisos=function(r){
     const react = (DB.avisoReactions && DB.avisoReactions[a.id]) || { like:0, ciente:0, users:{} };
     const userKey = (PREVIEW_STUD && PREVIEW_STUD.cod) ? PREVIEW_STUD.cod : (PREVIEW_ROLE || 'gestor');
     const myReact = react.users ? react.users[userKey] : null;
+    const receipts = avGetReadReceipts(a.id);
 
     return `<div class="card hover-lift" style="padding:0;overflow:hidden;border:1px solid var(--border-color);border-radius:18px;box-shadow:var(--shadow-sm);background:var(--card-bg);${a.pin?'border:2px solid '+cat.c:''};${exp?'opacity:.65':''};display:flex;flex-direction:column;justify-content:space-between">
       <div>
@@ -1433,8 +1554,8 @@ VIEWS.avisos=function(r){
         <div style="padding:18px 20px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <span style="font-size:11px;font-weight:800;color:${cat.c};background:${cat.bg};padding:4px 12px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px">${cat.label}</span>
+            <span style="font-size:11px;font-weight:700;color:var(--brand-cyan);background:rgba(6,182,212,.12);padding:4px 12px;border-radius:999px">${esc(avCanalLabel(a.canal))}</span>
             <span style="font-size:11px;font-weight:700;color:var(--text-soft);background:var(--surface-2);padding:4px 12px;border-radius:999px;border:1px solid var(--border-color)">${esc(avAlcanceLabel(a))}</span>
-            ${avPub(a)!=='ambos'?`<span style="font-size:11px;font-weight:700;color:var(--brand-purple);background:rgba(147,51,234,.12);padding:4px 12px;border-radius:999px">${esc(avPubLabel(avPub(a)))}</span>`:''}
             ${a.pin?`<span style="font-size:11px;font-weight:800;color:var(--brand-amber);margin-left:auto;display:inline-flex;align-items:center;gap:4px">📌 Fixado</span>`:''}
             ${exp?`<span style="font-size:11px;font-weight:800;color:var(--brand-coral);margin-left:auto">Expirado</span>`:''}
           </div>
@@ -1454,11 +1575,11 @@ VIEWS.avisos=function(r){
         </div>
 
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <button class="btn sm" onclick="avToggleReaction('${a.id}','ciente')" style="padding:4px 10px;font-size:11.5px;border-radius:8px;background:${myReact==='ciente'?'var(--brand-emerald)':'var(--card-bg)'};color:${myReact==='ciente'?'#fff':'var(--title-color)'};border:1px solid var(--border-color)">
-            👍 Ciente ${react.ciente > 0 ? `<b style="margin-left:4px">${react.ciente}</b>` : ''}
+          <button class="btn sm" onclick="avOpenReadReceiptsModal('${a.id}')" title="Ver quem já tomou conhecimento" style="padding:4px 10px;font-size:11.5px;border-radius:8px;background:rgba(16,185,129,.12);color:var(--brand-emerald);border:1px solid rgba(16,185,129,.3);font-weight:700">
+            👁️ ${receipts.length} leram
           </button>
-          <button class="btn sm" onclick="avToggleReaction('${a.id}','like')" style="padding:4px 10px;font-size:11.5px;border-radius:8px;background:${myReact==='like'?'var(--brand-coral)':'var(--card-bg)'};color:${myReact==='like'?'#fff':'var(--title-color)'};border:1px solid var(--border-color)">
-            ❤️ Útil ${react.like > 0 ? `<b style="margin-left:4px">${react.like}</b>` : ''}
+          <button class="btn sm" onclick="avToggleReaction('${a.id}','ciente')" style="padding:4px 10px;font-size:11.5px;border-radius:8px;background:${myReact==='ciente'?'var(--brand-emerald)':'var(--card-bg)'};color:${myReact==='ciente'?'#fff':'var(--title-color)'};border:1px solid var(--border-color)">
+            👍 ${react.ciente > 0 ? react.ciente : ''}
           </button>
           <button class="btn sm" title="Partilhar no WhatsApp" onclick="avShareWhatsApp('${a.id}')" style="background:#25D366;color:#fff;border-color:#25D366;padding:4px 10px">📲 WA</button>
           <button class="btn sm" title="${a.pin?'Desafixar':'Fixar'}" onclick="avTogglePin('${a.id}')" style="color:${a.pin?'var(--brand-amber)':'var(--text-dim)'};padding:4px 8px">${I.pin}</button>
@@ -1469,24 +1590,24 @@ VIEWS.avisos=function(r){
     </div>`;
   }).join('');
 
-  r.innerHTML=`
-  <div class="vhead"><h1>Mural de Avisos & Central de Comunicação</h1><p>Publique comunicados para a comunidade escolar ou envie notificações direcionadas via WhatsApp e SMS.</p></div>
+  const canalTab = (id, lab, n, icon) => `<button class="btn ${AVUI.canal===id?'pri':'ghost'}" onclick="AVUI.canal='${id}';render()" style="border-radius:14px;padding:9px 16px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px">
+    <span>${icon} ${lab}</span>
+    <span style="background:${AVUI.canal===id?'rgba(255,255,255,.25)':'var(--surface-2)'};padding:2px 8px;border-radius:10px;font-size:11px">${n}</span>
+  </button>`;
 
-  <!-- HERO CARD -->
-  <div class="card" style="padding:24px;margin-bottom:20px;background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:#fff;border:none;border-radius:22px;box-shadow:var(--shadow-md)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;color:#fff">${I.mural}</div>
-        <div>
-          <div style="font-family:var(--sans);font-size:24px;font-weight:800;letter-spacing:-0.4px">${counts.ativos} Avisos Ativos</div>
-          <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px">${counts.pin} fixados no topo · ${counts.escola} para toda a escola · ${counts.turma} para turmas · ${counts.aluno} diretos</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" onclick="avCatsManage()" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 16px;font-weight:700">⚙️ Categorias</button>
-        <button class="btn" onclick="go('mural')" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 16px;font-weight:700">👁️ Vista Alunos / Pais</button>
-        <button class="btn pri" onclick="avOpenForm()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:12px;padding:10px 20px;font-weight:700;box-shadow:0 4px 14px rgba(37,99,235,.4)">${I.plus} Novo Aviso</button>
-      </div>
+  r.innerHTML=`
+  <div class="vhead"><h1>Mural de Avisos & Central de Comunicação</h1><p>Central de comunicação interna (Sala dos Professores), encarregados de educação e comunidade escolar.</p></div>
+
+  <!-- CANAIS PRINCIPAIS -->
+  <div class="card" style="padding:14px 16px;margin-bottom:20px;border-radius:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card-bg)">
+    ${canalTab('todos','Todos os Canais',counts.todos,'💬')}
+    ${canalTab('professores','Sala dos Professores',counts.professores,'👥')}
+    ${canalTab('encarregados','Encarregados de Educação',counts.encarregados,'👪')}
+    ${canalTab('geral','Mural Geral da Escola',counts.geral,'📢')}
+    
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn" onclick="avCatsManage()" style="border-radius:12px;padding:9px 14px;font-weight:700">⚙️ Categorias</button>
+      <button class="btn pri" onclick="avOpenForm()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;border-radius:12px;padding:9px 18px;font-weight:700;box-shadow:0 4px 14px rgba(37,99,235,.4)">${I.plus} Novo Aviso</button>
     </div>
   </div>
 
@@ -1511,19 +1632,16 @@ VIEWS.avisos=function(r){
       </select>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
-      ${stat('Todos',counts.todos,'todos')}
+      ${stat('Todos os Estados',counts.todos,'todos')}
       ${stat('Ativos',counts.ativos,'ativos')}
-      ${stat('Fixados',counts.pin,'pin')}
-      ${stat('Escola',counts.escola,'escola')}
-      ${stat('Turmas',counts.turma,'turma')}
-      ${stat('Alunos',counts.aluno,'aluno')}
-      ${refinado?`<button class="btn sm" onclick="AVUI.q='';AVUI.cat='';AVUI.tk='';render()" style="margin-left:auto">Limpar (${list.length})</button>`:''}
+      ${stat('Fixados no Topo',counts.pin,'pin')}
+      ${refinado?`<button class="btn sm" onclick="AVUI.canal='todos';AVUI.q='';AVUI.cat='';AVUI.tk='';render()" style="margin-left:auto">Limpar Filtros (${list.length})</button>`:''}
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:18px">${cards||`<div class="card" style="grid-column:1/-1"><div class="empty">${I.mural}<div>${refinado?'Nenhum aviso corresponde à pesquisa.':'Ainda não há avisos. Crie o primeiro com “Novo aviso”.'}</div></div></div>`}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:18px">${cards||`<div class="card" style="grid-column:1/-1"><div class="empty">${I.mural}<div>${refinado?'Nenhum aviso corresponde à pesquisa.':'Ainda não há avisos neste canal. Crie o primeiro com “Novo aviso”.'}</div></div></div>`}</div>
 
-  <div class="help" style="margin-top:20px;border-radius:14px">${I.info}<div>Publicando como <b>${esc(avAuthorLabel())}</b>. Clique em <b>📲 WA</b> num card para partilhar instantaneamente a mensagem formatada no WhatsApp dos encarregados.</div></div>`;
+  <div class="help" style="margin-top:20px;border-radius:14px">${I.info}<div>Publicando como <b>${esc(avAuthorLabel())}</b>. Clique no botão <b>👁️ Leitura</b> num card para ver quem confirmou ter tomado conhecimento.</div></div>`;
 };
 
 /* —— Estado do formulário —— */
@@ -1534,7 +1652,7 @@ function avOpenForm(id){
   const isDt = PREVIEW_ROLE==='diretor';
   const dtTk = avDtTurma();
   AVFORM = ex ? Object.assign({},ex) : {
-    id:uid(), categoria:'geral', titulo:'', corpo:'',
+    id:uid(), canal:'geral', disciplina:'', categoria:'geral', titulo:'', corpo:'',
     alcance: isDt?'turma':'escola', tk: isDt?dtTk:(turmaKeys()[0]||''), cod:'',
     pin:false, validade:0, publico:'ambos', autor:avAuthorLabel(), autorRole:avAuthorRole(), ts:0
   };
@@ -1542,7 +1660,7 @@ function avOpenForm(id){
   Object.assign(AVFORM, avPubToFlags(AVFORM.publico));
   avRenderForm();
 }
-function avFormSet(k,v){ AVFORM[k]=v; if(['alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm(); }
+function avFormSet(k,v){ AVFORM[k]=v; if(['canal','alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm(); }
 function avRenderForm(){
   const a=AVFORM; const isDt=PREVIEW_ROLE==='diretor'; const dtTk=avDtTurma();
   const tks=turmaKeys();
@@ -1554,43 +1672,55 @@ function avRenderForm(){
   const gearSvg=I.cog.replace('<svg ','<svg width="16" height="16" ');
   const gearBtn=`<button onclick="avCatsManage(true)" title="Gerir categorias" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px dashed var(--border-color);background:var(--card-bg);color:var(--text-soft);border-radius:10px;cursor:pointer;flex:0 0 auto;padding:0">${gearSvg}</button>`;
   const catBtns=gearBtn+catPills;
+  
   const alcanceOpt=(val,lab,dis)=>`<label style="display:flex;align-items:center;gap:7px;padding:9px 12px;border:1.5px solid ${a.alcance===val?'var(--brand-cyan)':'var(--border-color)'};border-radius:12px;cursor:${dis?'not-allowed':'pointer'};opacity:${dis?'.45':'1'};flex:1;min-width:120px;background:${a.alcance===val?'var(--surface-2)':'var(--card-bg)'}">
     <input type="radio" name="avalc" ${a.alcance===val?'checked':''} ${dis?'disabled':''} onchange="avFormSet('alcance','${val}')"><span style="font-size:13px;font-weight:700;color:var(--title-color)">${lab}</span></label>`;
+  
+  const canalOpt=(val,lab,ic)=>`<label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid ${a.canal===val?'var(--brand-cyan)':'var(--border-color)'};border-radius:12px;cursor:pointer;flex:1;min-width:140px;background:${a.canal===val?'var(--surface-2)':'var(--card-bg)'}">
+    <input type="radio" name="avcanal" ${a.canal===val?'checked':''} onchange="avFormSet('canal','${val}')">
+    <span style="font-size:13px;font-weight:700;color:var(--title-color)">${ic} ${lab}</span></label>`;
+
   let detalhe='';
   if(a.alcance==='turma'){
     if(isDt){ detalhe=`<div class="field"><label>Turma</label><div style="font-weight:700;color:var(--title-color);background:var(--surface-2);padding:9px 14px;border-radius:10px">${esc(dtTk)}</div></div>`; AVFORM.tk=dtTk; }
-    else detalhe=`<div class="field"><label>Turma</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${a.tk===tk?'selected':''}>${esc(tk)} — ${esc(NOTAS.turmas[tk].classe)}</option>`).join('')}</select></div>`;
+    else detalhe=`<div class="field"><label>Turma Destino</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${a.tk===tk?'selected':''}>Turma ${esc(tk)} — ${esc(NOTAS.turmas[tk].classe)}</option>`).join('')}</select></div>`;
   } else if(a.alcance==='aluno'){
     const tkSel=isDt?dtTk:(a.tk||tks[0]); AVFORM.tk=tkSel;
     const t=NOTAS.turmas[tkSel]; const studs=t?Object.keys(t.roster).sort((x,y)=>(t.roster[x].num||0)-(t.roster[y].num||0)):[];
     detalhe=`<div class="grid2" style="grid-template-columns:1fr 1.4fr;gap:10px">
       ${isDt?`<div class="field"><label>Turma</label><div style="font-weight:700;color:var(--title-color);background:var(--surface-2);padding:9px 14px;border-radius:10px">${esc(dtTk)}</div></div>`
-        :`<div class="field"><label>Turma</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${tkSel===tk?'selected':''}>${esc(tk)}</option>`).join('')}</select></div>`}
+        :`<div class="field"><label>Turma</label><select onchange="avFormSet('tk',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">${tks.map(tk=>`<option value="${tk}" ${tkSel===tk?'selected':''}>Turma ${esc(tk)}</option>`).join('')}</select></div>`}
       <div class="field"><label>Aluno</label><select onchange="avFormSet('cod',this.value)" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;width:100%;background:var(--card-bg);color:var(--title-color);font-weight:600">
-        <option value="">— escolher —</option>
+        <option value="">— escolher aluno —</option>
         ${studs.map(c=>`<option value="${c}" ${a.cod===c?'selected':''}>${esc(t.roster[c].nome)}</option>`).join('')}</select></div>
     </div>`;
   }
+
   const validadeIso = a.validade?avTsToIso(a.validade):'';
   openModal(`
     <div class="modal-h"><h3>${a.ts?'Editar aviso':'Novo aviso'}</h3><button class="xbtn" onclick="closeModal()">${I.x}</button></div>
     <div class="modal-b" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>Canal de Comunicação</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${canalOpt('professores','Sala dos Professores','👥')}
+          ${canalOpt('encarregados','Encarregados de Educação','👪')}
+          ${canalOpt('geral','Mural Geral da Escola','📢')}
+        </div>
+      </div>
+
       <div class="field"><label>Categoria</label><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">${catBtns}</div></div>
-      <div class="field"><label>Título</label><input id="av_tit" value="${esc(a.titulo)}" maxlength="90" placeholder="Ex.: Reunião de encarregados" oninput="AVFORM.titulo=this.value" style="padding:10px 12px;border-radius:10px"></div>
-      <div class="field"><label>Mensagem</label><textarea id="av_corpo" rows="4" placeholder="Escreva aqui o conteúdo do aviso…" oninput="AVFORM.corpo=this.value" style="resize:vertical;padding:10px 12px;border-radius:10px">${esc(a.corpo)}</textarea></div>
-      <div class="field"><label>Destinatários</label><div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="field"><label>Título do Aviso</label><input id="av_tit" value="${esc(a.titulo)}" maxlength="90" placeholder="Ex.: Convocatória para Conselho de Turma / Reunião" oninput="AVFORM.titulo=this.value" style="padding:10px 12px;border-radius:10px"></div>
+      <div class="field"><label>Conteúdo da Mensagem</label><textarea id="av_corpo" rows="4" placeholder="Escreva aqui o conteúdo do aviso…" oninput="AVFORM.corpo=this.value" style="resize:vertical;padding:10px 12px;border-radius:10px">${esc(a.corpo)}</textarea></div>
+      
+      <div class="field"><label>Alcance</label><div style="display:flex;gap:8px;flex-wrap:wrap">
         ${alcanceOpt('escola','Toda a escola',isDt)}
         ${alcanceOpt('turma','Uma turma',false)}
         ${alcanceOpt('aluno','Um aluno',false)}
       </div></div>
       ${detalhe}
-      <div class="field"><label>Visível no mural de</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1.5px solid ${a.pAluno?'var(--brand-cyan)':'var(--border-color)'};border-radius:10px;cursor:pointer;flex:1;min-width:150px;background:${a.pAluno?'var(--surface-2)':'var(--card-bg)'}">
-            <input type="checkbox" ${a.pAluno?'checked':''} onchange="avFormSet('pAluno',this.checked)"><span style="font-size:13px;font-weight:700;color:var(--title-color)">Estudantes</span></label>
-          <label style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1.5px solid ${a.pEnc?'var(--brand-cyan)':'var(--border-color)'};border-radius:10px;cursor:pointer;flex:1;min-width:150px;background:${a.pEnc?'var(--surface-2)':'var(--card-bg)'}">
-            <input type="checkbox" ${a.pEnc?'checked':''} onchange="avFormSet('pEnc',this.checked)"><span style="font-size:13px;font-weight:700;color:var(--title-color)">Encarregados</span></label>
-        </div></div>
+
+      ${a.canal==='professores'?`<div class="field"><label>Grupo Disciplinar / Matéria (opcional)</label><input value="${esc(a.disciplina||'')}" placeholder="Ex.: Filosofia, Matemática, Direção de Turma…" oninput="AVFORM.disciplina=this.value" style="padding:9px 12px;border-radius:10px"></div>`:''}
+
       <div class="grid2" style="grid-template-columns:1fr 1fr;gap:10px;align-items:end">
         <div class="field"><label>Válido até <span class="hint">(opcional)</span></label><input type="date" value="${validadeIso}" onchange="AVFORM.validade=this.value?avIsoToTs(this.value):0" style="padding:9px 12px;border-radius:10px"></div>
         <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--surface-2);border-radius:10px;border:1px solid var(--border-color)"><input type="checkbox" ${a.pin?'checked':''} onchange="AVFORM.pin=this.checked"><span style="font-size:13px;font-weight:700;color:var(--title-color)">📌 Fixar no topo</span></label>
@@ -1604,18 +1734,17 @@ function avCommit(){
   if(!a.corpo){ toast('Escreva a mensagem',true); return; }
   if(a.alcance==='aluno'&&!a.cod){ toast('Escolha o aluno',true); return; }
   const pub=avFlagsToPub(a.pAluno,a.pEnc);
-  if(!pub){ toast('Escolha pelo menos uma bacheca (aluno ou encarregado)',true); return; }
-  a.publico=pub;
+  a.publico=pub||'ambos';
   if(a.alcance==='escola') a.cod='';
-  if(!a.ts) a.ts=avNow();             /* mantém data de criação ao editar */
+  if(!a.ts) a.ts=avNow();
   a.autor=a.autor||avAuthorLabel(); a.autorRole=a.autorRole||avAuthorRole();
-  const rec=Object.assign({},a); delete rec.pAluno; delete rec.pEnc;  /* flags só do formulário */
+  const rec=Object.assign({},a); delete rec.pAluno; delete rec.pEnc;
   avSave(rec); closeModal(); toast('Aviso publicado ✓'); render();
 }
 function avConfirmDel(id){ const a=DB.avisos.find(x=>x.id===id); if(!a)return;
   confirmDel('Eliminar o aviso “'+a.titulo+'”? Esta ação não pode ser desfeita.',()=>{ avDel(id); toast('Aviso eliminado'); render(); }); }
 
-/* —— VISTA MURAL (encarregado / aluno) —— */
+/* —— VISTA MURAL (encarregado / aluno / leitor) —— */
 function avMuralView(r){
   const isEnc=PREVIEW_ROLE==='encarregado';
   setSub('Mural da Escola · Avisos & Notificações');
@@ -1634,6 +1763,10 @@ function avMuralView(r){
       : {t:'Escola',c:'var(--brand-cyan)',bg:'rgba(6,182,212,.12)'};
     const react = (DB.avisoReactions && DB.avisoReactions[av.id]) || { like:0, ciente:0, users:{} };
     const myReact = react.users ? react.users[cod] : null;
+
+    const userKey = cod;
+    const receipts = avGetReadReceipts(av.id);
+    const readByMe = receipts.some(r => r.key === userKey);
 
     return `<div class="card hover-lift" style="padding:0;overflow:hidden;border-radius:18px;border:1px solid var(--border-color);box-shadow:var(--shadow-sm);background:var(--card-bg);${av.pin?'border:2px solid '+cat.c:''}">
       <div style="height:6px;background:${cat.c}"></div>
@@ -1654,8 +1787,8 @@ function avMuralView(r){
           </div>
           
           <div style="display:flex;align-items:center;gap:8px">
-            <button class="btn sm" onclick="avToggleReaction('${av.id}','ciente')" style="padding:6px 14px;font-weight:700;font-size:12.5px;border-radius:10px;background:${myReact==='ciente'?'var(--brand-emerald)':'var(--surface-2)'};color:${myReact==='ciente'?'#fff':'var(--title-color)'};border:1px solid var(--border-color)">
-              👍 ${myReact==='ciente'?'Ciente ✓':'Confirmar Leitura'} ${react.ciente > 0 ? `(${react.ciente})` : ''}
+            <button class="btn sm" onclick="avToggleReadReceipt('${av.id}')" style="padding:6px 14px;font-weight:700;font-size:12.5px;border-radius:10px;background:${readByMe?'rgba(16,185,129,.15)':'var(--surface-2)'};color:${readByMe?'var(--brand-emerald)':'var(--title-color)'};border:1.5px solid ${readByMe?'var(--brand-emerald)':'var(--border-color)'}">
+              ${readByMe ? '✅ Tomou Conhecimento' : '👁️ Declarar Visto'}
             </button>
             <button class="btn sm" onclick="avToggleReaction('${av.id}','like')" style="padding:6px 12px;font-weight:700;font-size:12.5px;border-radius:10px;background:${myReact==='like'?'var(--brand-coral)':'var(--surface-2)'};color:${myReact==='like'?'#fff':'var(--title-color)'};border:1px solid var(--border-color)">
               ❤️ ${react.like > 0 ? react.like : ''}
