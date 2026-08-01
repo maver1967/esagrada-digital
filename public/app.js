@@ -1628,7 +1628,7 @@ VIEWS.avisos=function(r){
         </span>
         <input id="av_q" placeholder="Procurar por título, conteúdo ou autor…" value="${esc(AVUI.q)}"
           oninput="AVUI.q=this.value;render();setTimeout(()=>{const e=document.getElementById('av_q');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},0)"
-          style="width:100%;padding:10px 12px 10px 38px;border:1px solid var(--border-color);border-radius:12px;font-size:13px;background:var(--surface-2);color:var(--title-color)">
+          style="width:100%;padding:10px 14px 10px 38px !important;border:1px solid var(--border-color);border-radius:12px;font-size:13px;background:var(--surface-2);color:var(--title-color)">
       </div>
       <select onchange="AVUI.cat=this.value;render()" style="padding:10px 14px;border:1px solid var(--border-color);border-radius:12px;font-size:13px;background:var(--card-bg);color:var(--title-color);font-weight:700">
         <option value="">Todas as categorias</option>
