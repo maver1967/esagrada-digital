@@ -1654,6 +1654,49 @@ VIEWS.avisos=function(r){
 
 /* —— Estado do formulário —— */
 let AVFORM=null;
+
+function avOpenForm(id){
+  ensureAvisos();
+  AVFORM = null;
+  if(id){
+    const found = DB.avisos.find(x => x.id === id);
+    if(found){
+      AVFORM = Object.assign({}, found);
+      AVFORM.pAluno = (AVFORM.publico === 'ambos' || AVFORM.publico === 'aluno');
+      AVFORM.pEnc = (AVFORM.publico === 'ambos' || AVFORM.publico === 'encarregado');
+    }
+  }
+  if(!AVFORM){
+    const defaultCanal = (typeof AVUI !== 'undefined' && AVUI && AVUI.canal && AVUI.canal !== 'todos') ? AVUI.canal : 'geral';
+    const isDt = PREVIEW_ROLE === 'diretor';
+    const dtTk = avDtTurma();
+    AVFORM = {
+      id: 'av_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      ts: 0,
+      canal: defaultCanal,
+      alcance: isDt ? 'turma' : 'escola',
+      tk: isDt ? dtTk : '',
+      cod: '',
+      disciplina: '',
+      categoria: 'geral',
+      titulo: '',
+      corpo: '',
+      validade: 0,
+      pin: false,
+      publico: 'ambos',
+      pAluno: true,
+      pEnc: true,
+      autor: avAuthorLabel(),
+      autorRole: avAuthorRole()
+    };
+    if(isDt){
+      AVFORM.canal = 'encarregados';
+      AVFORM.alcance = 'turma';
+    }
+  }
+  avRenderForm();
+}
+
 function avFormSet(k,v){
   AVFORM[k]=v;
   if(['canal','alcance','tk','categoria','pAluno','pEnc'].includes(k)) avRenderForm();
