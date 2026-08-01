@@ -1794,12 +1794,40 @@ VIEWS.config=function(r){
         ${field('Função do Adjunto',`<input type="text" id="cf_arole" value="${esc(s.adjuntoRole)}">`)}
       </div>
     </div></div>
+
+    <!-- REPOSITÓRIO & ARMAZENAMENTO MULTI-FONTE -->
+    <div class="card"><div class="card-h"><h3 style="display:flex;align-items:center;gap:8px"><span>📁 Repositório de Ficheiros & Servidores</span></h3></div><div class="card-p">
+      <p style="font-size:12.5px;color:var(--text-muted,#64748b);margin-top:0">Configure as origens de dados para materiais didáticos, apontamentos e trabalhos da Sala Virtual.</p>
+      
+      <div class="grid2" style="gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🖥️ Servidor NAS Synology (Rede Local / QuickConnect)</div>
+          ${field('Endereço IP / URL Synology NAS',`<input type="text" id="cf_nas_url" placeholder="ex: http://192.168.1.200:5000 ou https://esagrada.quickconnect.to" value="${esc(s.nasUrl || '')}">`,'Acesso rápido na LAN da escola sem consumo de internet')}
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📁 Google Drive / Workspace</div>
+          ${field('Link da Pasta Partilhada Google Drive',`<input type="text" id="cf_gdrive_url" placeholder="https://drive.google.com/drive/folders/..." value="${esc(s.gdriveUrl || '')}">`,'Pasta pública/partilhada com apontamentos da escola')}
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        ${field('Origem Recomendada por Defeito',`
+          <select id="cf_storage_pref" style="width:100%;padding:9px 12px;border:1.5px solid var(--line,#cbd5e1);border-radius:8px;font-weight:700">
+            <option value="nas" ${(s.storagePref === 'nas' || !s.storagePref) ? 'selected' : ''}>🖥️ Synology NAS Local (Recomendado na Escola)</option>
+            <option value="gdrive" ${s.storagePref === 'gdrive' ? 'selected' : ''}>📁 Google Drive / Cloud</option>
+            <option value="local" ${s.storagePref === 'local' ? 'selected' : ''}>📎 Ficheiro Anexo Local (Upload PWA)</option>
+          </select>
+        `)}
+      </div>
+    </div></div>
   </div>`;
   const b=(id,fn)=>{const el=$('#'+id);if(el)el.onchange=()=>{fn(el);persist();buildNav();};};
   b('cf_name',e=>s.schoolName=e.value); b('cf_bt',e=>s.brandTop=e.value); b('cf_bm',e=>s.brandMain=e.value);
   b('cf_bs',e=>s.brandSub=e.value); b('cf_city',e=>s.city=e.value); b('cf_addr',e=>s.address=e.value);
   b('cf_cell',e=>s.cell=e.value); b('cf_year',e=>{s.year=e.value;}); b('cf_email',e=>s.email=e.value); b('cf_web',e=>s.website=e.value);
   b('cf_dname',e=>s.director=e.value); b('cf_dir',e=>s.directorName=e.value); b('cf_arole',e=>s.adjuntoRole=e.value); b('cf_aname',e=>s.adjunto=e.value);
+  b('cf_nas_url',e=>s.nasUrl=e.value); b('cf_gdrive_url',e=>s.gdriveUrl=e.value); b('cf_storage_pref',e=>s.storagePref=e.value);
   $('#cf_logo').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{s.logo=rd.result;persist();render();buildNav();};rd.readAsDataURL(f);};
   if($('#cf_logodel'))$('#cf_logodel').onclick=()=>{s.logo='';persist();render();buildNav();};
 };
@@ -10049,11 +10077,11 @@ VIEWS.salaVirtual = function(r) {
 
           <!-- Subject Selector Dropdown -->
           ${discs.length > 0 ? `
-          <div style="position:relative">
-            <select onchange="SVUI.disc=this.value;render();" style="appearance:none;-webkit-appearance:none;padding:8px 30px 8px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a!important;font-size:13.5px;font-weight:800;cursor:pointer;outline:none">
-              ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''} style="background:#ffffff;color:#0f172a;font-weight:700">${esc(d)}</option>`).join('')}
+          <div style="position:relative;display:inline-block">
+            <select class="sv-disc-select" onchange="SVUI.disc=this.value;render();">
+              ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''}>${esc(d)}</option>`).join('')}
             </select>
-            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#475569;font-size:10px">▼</span>
+            <span class="sv-disc-arrow">▼</span>
           </div>` : ''}
 
           <!-- Trimester Pills -->
@@ -10111,6 +10139,36 @@ VIEWS.salaVirtual = function(r) {
   `;
 };
 
+function svGetLinkBadgeHtml(link) {
+  if (!link) return '';
+  const url = link.toLowerCase();
+  let label = '🔗 Abrir Link Anexo';
+  let bg = '#f1f5f9';
+  let border = '#cbd5e1';
+  let color = '#0284c7';
+
+  if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
+    label = '📁 Google Drive';
+    bg = '#eff6ff';
+    border = '#bfdbfe';
+    color = '#1d4ed8';
+  } else if (url.includes('192.168.') || url.includes('quickconnect') || url.includes(':5000') || url.includes(':5001') || url.includes('nas')) {
+    label = '🖥️ Synology NAS';
+    bg = '#f0f9ff';
+    border = '#bae6fd';
+    color = '#0369a1';
+  } else if (url.includes('dropbox') || url.includes('onedrive')) {
+    label = '☁️ Cloud External';
+    bg = '#f5f3ff';
+    border = '#ddd6fe';
+    color = '#6d28d9';
+  }
+
+  return `<a href="${esc(link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${bg};border:1px solid ${border};border-radius:8px;font-size:12px;font-weight:700;color:${color};text-decoration:none">
+    ${label}
+  </a>`;
+}
+
 /* RENDER MATERIAIS */
 function renderSvMateriais(list, isTeacherOrAdmin) {
   if(list.length === 0) {
@@ -10144,10 +10202,7 @@ function renderSvMateriais(list, isTeacherOrAdmin) {
               📎 ${esc(m.anexo.name)} (${m.anexo.size})
             </a>` : ''}
 
-            ${m.link ? `
-            <a href="${esc(m.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#eff6ff' : '#f1f5f9'};border:1px solid ${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#bfdbfe' : '#cbd5e1'};border-radius:8px;font-size:12px;font-weight:700;color:${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '#1d4ed8' : '#0284c7'};text-decoration:none">
-              ${(m.link.includes('drive.google.com')||m.link.includes('docs.google.com')) ? '📁 Abrir no Google Drive' : '🔗 Abrir Link Anexo'}
-            </a>` : ''}
+            ${m.link ? svGetLinkBadgeHtml(m.link) : ''}
           </div>` : ''}
         </div>
 
@@ -10199,10 +10254,7 @@ function renderSvTarefas(list, isTeacherOrAdmin) {
               📎 Enunciado: ${esc(t.anexo.name)} (${t.anexo.size})
             </a>` : ''}
 
-            ${t.link ? `
-            <a href="${esc(t.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#eff6ff' : '#f1f5f9'};border:1px solid ${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#bfdbfe' : '#cbd5e1'};border-radius:8px;font-size:12px;font-weight:700;color:${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '#1d4ed8' : '#0284c7'};text-decoration:none">
-              ${(t.link.includes('drive.google.com')||t.link.includes('docs.google.com')) ? '📁 Abrir Enunciado no Google Drive' : '🔗 Abrir Link Enunciado'}
-            </a>` : ''}
+            ${t.link ? svGetLinkBadgeHtml(t.link) : ''}
           </div>` : ''}
 
           <div style="display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;color:var(--text-muted,#64748b)">
