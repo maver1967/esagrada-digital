@@ -39,24 +39,21 @@
     }
   }
   window.forceAppUpdate = function() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        let promises = registrations.map(r => r.unregister());
-        Promise.all(promises).then(function() {
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              return Promise.all(names.map(n => caches.delete(n)));
-            }).then(function() {
-              window.location.href = window.location.pathname + '?v=' + Date.now();
-            });
-          } else {
-            window.location.href = window.location.pathname + '?v=' + Date.now();
-          }
-        });
-      });
-    } else {
-      window.location.href = window.location.pathname + '?v=' + Date.now();
-    }
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let r of registrations) { r.unregister(); }
+        }).catch(function(){});
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let n of names) caches.delete(n);
+        }).catch(function(){});
+      }
+    } catch(e){}
+    setTimeout(function(){
+      window.location.href = window.location.origin + window.location.pathname + '?nocache=' + Date.now();
+    }, 300);
   };
 </script>
 <div class="app" id="app" style="display:none">
@@ -66,7 +63,7 @@
       <div><div class="bt">ESAGRADA</div><div class="bs">Plataforma digital</div></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot">Escola Pré-Universitária<br>Sagrada Família · Maxixe<br><span style="opacity:.8;cursor:pointer;text-decoration:underline" onclick="forceAppUpdate()" title="Clique para forçar atualização">v3.7.0 · 01/08/2026 · 🔄 atualizar</span></div>
+    <div class="foot">Escola Pré-Universitária<br>Sagrada Família · Maxixe<br><span style="opacity:.8;cursor:pointer;text-decoration:underline" onclick="forceAppUpdate()" title="Clique para forçar atualização">v3.8.0 · 01/08/2026 · 🔄 atualizar</span></div>
   </aside>
   <header class="topbar">
     <button class="navtoggle" id="navToggle" aria-label="Abrir menu" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
@@ -95,6 +92,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="./qrcode.js"></script>
-  <script src="./app.js?v=3.7.0"></script>
+  <script src="./app.js?v=3.8.0"></script>
 </body>
 </html>

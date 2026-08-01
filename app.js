@@ -968,6 +968,14 @@ function profDashView(r){
           <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Lançamento e avaliação</div>
         </div>
       </div>
+
+      <div onclick="go('avisos')" class="card hover-lift" style="cursor:pointer;padding:18px;border-radius:16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(147,51,234,0.12);color:#9333ea;display:flex;align-items:center;justify-content:center;font-size:22px">💬</div>
+        <div>
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">Mural de Avisos</div>
+          <div style="font-size:11.5px;color:var(--text-muted,#64748b)">Sala dos Professores e Encarregados</div>
+        </div>
+      </div>
     </div>
 
     <!-- TODAY LESSONS -->
@@ -1189,7 +1197,7 @@ function avAuthorLabel(){
   if(PREVIEW_ROLE==='diretor'){ const tk=avDtTurma(); return 'Director de Turma'+(tk?(' · '+tk):''); }
   return 'Direção';
 }
-function avAuthorRole(){ return (PREVIEW_ROLE==='secretaria'||PREVIEW_ROLE==='diretor')?PREVIEW_ROLE:'direcao'; }
+function avAuthorRole(){ return (PREVIEW_ROLE==='secretaria'||PREVIEW_ROLE==='diretor'||PREVIEW_ROLE==='professor')?PREVIEW_ROLE:'direcao'; }
 function getDtTeachers(){
   const dts = DB.diretoresTurma || {};
   const tks = turmaKeys();
@@ -1214,7 +1222,7 @@ function avDtTurma(){
   }
   return '';
 }
-function avCanManage(){ return ['direcao','secretaria','diretor'].includes(PREVIEW_ROLE); }
+function avCanManage(){ return ['direcao','secretaria','diretor','professor'].includes(PREVIEW_ROLE); }
 /* Datas */
 function avNow(){ return Date.now(); }
 function avFmt(ts){ if(!ts)return''; const d=new Date(ts); const z=n=>String(n).padStart(2,'0');
@@ -6424,7 +6432,7 @@ const ROLES = {
 const ROLE_NAV = {
   direcao: '*',
   diretor:   ['diario','planificacao','salaVirtual','livropres','anag','classes','grid','tview','test','cadernetas','pautas','alunos','docs','transicao','arqanos','avisos'],
-  professor: ['diario','planificacao','salaVirtual','grid','tview','test','cadernetas','alunos'],
+  professor: ['diario','planificacao','salaVirtual','grid','tview','test','cadernetas','alunos','avisos'],
   secretaria:['anag','teachers','cta','classes','trimestres','calendario','financa','docs','archive','arqanos','avisos'],
   aluno:     ['salaVirtual','mural','grid','alunos'],
   encarregado:['dash','mural','grid','alunos','financa'],
@@ -6433,7 +6441,7 @@ const ROLE_NAV = {
 const ROLE_RELABEL = {
   aluno:      {grid:'O meu horário', alunos:'As minhas notas', mural:'Avisos', salaVirtual:'Sala Virtual'},
   encarregado:{dash:'Painel do educando', grid:'Horário do educando', alunos:'Notas do educando', financa:'Propinas', mural:'Avisos'},
-  professor:  {grid:'Os meus horários', tview:'O meu horário', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)'},
+  professor:  {grid:'Os meus horários', tview:'O meu horário', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)', avisos:'Mural de Avisos'},
   diretor:    {alunos:'Notas da turma', pautas:'Pautas da turma', diario:'Diário de Aula', salaVirtual:'Sala Virtual (LMS)'},
 };
 let PREVIEW_ROLE = 'direcao';
