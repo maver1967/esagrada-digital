@@ -694,22 +694,33 @@ table.hd-grid tr.brk td{background:#fbfbfc;text-align:center;font-size:7.5px;fon
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.25);
+  padding: 12px 14px;
+  background: rgba(234, 179, 8, 0.15) !important;
+  border: 1px solid rgba(234, 179, 8, 0.4) !important;
   border-radius: 12px;
-  color: #fef08a;
+  color: #fef08a !important;
   font-size: 12px;
   margin-bottom: 14px;
 }
 
+.test-pass-badge b {
+  color: #ffffff !important;
+  font-size: 13px !important;
+}
+
+.test-pass-badge div {
+  color: #fef08a !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
 .test-pass-badge code {
-  background: rgba(234, 179, 8, 0.25);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 13px;
-  color: #fff;
+  background: #f59e0b !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  color: #0f172a !important;
 }
 
 .login-school-sub {
