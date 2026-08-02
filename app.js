@@ -600,6 +600,14 @@ function roleSelectorHtml(){
   </div>`;
 }
 function navBadge(id){
+  if(PREVIEW_ROLE==='professor'){
+    if(id==='anag'||id==='alunos'){
+      const myTid = currentTeacherId();
+      const myTks = getTeacherTurmaKeys(myTid);
+      return myTks.reduce((a,k)=>a+Object.keys(NOTAS.turmas[k]?.roster||{}).length,0);
+    }
+    return '';
+  }
   if(PREVIEW_ROLE!=='direcao') return '';
   if(id==='classes')return DB.classes.length;
   if(id==='teachers')return DB.teachers.length;
@@ -765,6 +773,60 @@ function currentTeacherId(){
   }
   if(PREVIEW_TEACHER && DB && DB.teachers && DB.teachers.some(t=>t.id===PREVIEW_TEACHER)) return PREVIEW_TEACHER;
   return (DB && DB.teachers && DB.teachers[0]) ? DB.teachers[0].id : '';
+}
+
+function getTeacherTurmaKeys(tid){
+  if(!tid) return [];
+  const allTks = typeof turmaKeys === 'function' ? turmaKeys() : Object.keys((typeof NOTAS !== 'undefined' && NOTAS.turmas) ? NOTAS.turmas : {});
+  const matched = new Set();
+
+  const st = typeof teacherStats === 'function' ? teacherStats(tid) : null;
+  const clsNames = (st && Array.isArray(st.classes)) ? [...st.classes] : [];
+
+  const asgs = (DB && Array.isArray(DB.assignments)) ? DB.assignments.filter(a => a.tid === tid) : [];
+  const asgCids = asgs.map(a => a.cid);
+
+  if (typeof teacherSchedule === 'function') {
+    const sched = teacherSchedule(tid);
+    (typeof DAYS !== 'undefined' ? DAYS : []).forEach(d => {
+      const day = sched[d] || {};
+      Object.values(day).forEach(list => {
+        (list || []).forEach(x => {
+          if (x && x.cls) clsNames.push(x.cls);
+        });
+      });
+    });
+  }
+
+  allTks.forEach(tk => {
+    const t = NOTAS && NOTAS.turmas ? NOTAS.turmas[tk] : null;
+    if (!t) return;
+    const nameWithT = `${t.classe} T${t.turma}`.toLowerCase();
+    const nameClasseOnly = String(t.classe).toLowerCase();
+    const tkLower = String(tk).toLowerCase();
+
+    const matchName = clsNames.some(cn => {
+      const cnl = String(cn).toLowerCase();
+      return cnl === nameWithT || cnl === tkLower || cnl === nameClasseOnly;
+    });
+
+    const matchAsg = asgCids.some(cid => {
+      const cidL = String(cid).toLowerCase();
+      if (cidL === tkLower) return true;
+      const c = (DB && DB.classes) ? DB.classes.find(x => x.id === cid) : null;
+      if (c) {
+        const cNameL = String(c.name).toLowerCase();
+        return cNameL === nameWithT || cNameL === tkLower;
+      }
+      return false;
+    });
+
+    if (matchName || matchAsg) {
+      matched.add(tk);
+    }
+  });
+
+  return [...matched].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
 }
 
 function diIsoToday(){ return new Date().toISOString().slice(0,10); }
@@ -3031,21 +3093,41 @@ function teacherSchedule(tid){
   })));
   return sched;
 }
+
 VIEWS.tview=function(r){
-  if(!UI.teacher||!getTeacher(UI.teacher)) UI.teacher=DB.teachers[0]?.id||null;
+  const isDirecaoOrAdmin = ['direcao', 'admin', 'secretaria'].includes(PREVIEW_ROLE);
+  const myTid = currentTeacherId();
+
+  if (!isDirecaoOrAdmin || !UI.teacher || !getTeacher(UI.teacher)) {
+    UI.teacher = myTid || DB.teachers[0]?.id || null;
+  }
+
   if(!DB.teachers.length){r.innerHTML=`<div class="vhead"><h1>Vista Professores</h1></div>${hubTabs(['grid','tview','rules','export'],'tview')}<div class="card"><div class="empty">${I.teach}<div>Crie primeiro um professor.</div></div></div>`;return;}
-  const t=getTeacher(UI.teacher); const st=teacherStats(t.id);
+  const t=getTeacher(UI.teacher);
+  if(!t) return;
+  const st=teacherStats(t.id);
   setSub(teacherLabel(t));
   const sched=teacherSchedule(t.id);
-  r.innerHTML=`<div class="vhead"><h1>Vista por Professor</h1><p>Horário individual gerado automaticamente a partir das grelhas de todas as turmas.</p></div>
+
+  const teacherSelector = isDirecaoOrAdmin ? `
+    <button type="button" onclick="selectTeacherModal(UI.teacher, id => { UI.teacher = id; render(); })" style="display:inline-flex;align-items:center;gap:10px;padding:9px 16px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2,#f1f5f9);color:var(--title-color,#0f172a);font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(59,130,246,0.12)">
+      <span style="font-size:16px">👤</span>
+      <span>${esc(teacherLabel(t))}</span>
+      <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:2px">▼</span>
+    </button>
+  ` : `
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:12px;border:1.5px solid var(--line,#cbd5e1);background:var(--surface-2,#f1f5f9);color:var(--title-color,#0f172a);font-size:13.5px;font-weight:700">
+      <span style="font-size:16px">👤</span>
+      <span>${esc(teacherLabel(t))}</span>
+      <span style="font-size:11px;color:var(--brand-blue,#3b82f6);font-weight:700;background:rgba(59,130,246,0.12);padding:2px 8px;border-radius:99px;margin-left:4px">🔒 O seu Horário</span>
+    </div>
+  `;
+
+  r.innerHTML=`<div class="vhead"><h1>${isDirecaoOrAdmin ? 'Vista por Professor' : 'O Meu Horário'}</h1><p>${isDirecaoOrAdmin ? 'Horário individual gerado automaticamente a partir das grelhas de todas as turmas.' : 'O seu horário semanal individual de leccionação.'}</p></div>
   ${hubTabs(['grid','tview','rules','export'],'tview')}
   <div style="background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <button type="button" onclick="selectTeacherModal(UI.teacher, id => { UI.teacher = id; render(); })" style="display:inline-flex;align-items:center;gap:10px;padding:9px 16px;border-radius:12px;border:1.5px solid var(--brand-blue,#3b82f6);background:var(--surface-2,#f1f5f9);color:var(--title-color,#0f172a);font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(59,130,246,0.12)">
-        <span style="font-size:16px">👤</span>
-        <span>${esc(teacherLabel(t))}</span>
-        <span style="font-size:10px;color:var(--brand-blue,#3b82f6);margin-left:2px">▼</span>
-      </button>
+      ${teacherSelector}
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:rgba(59,130,246,0.12);color:var(--brand-blue,#3b82f6);border:1px solid rgba(59,130,246,0.3)">
           ⏰ ${st.total} Aulas / semana
@@ -4464,7 +4546,7 @@ function nStudentStats(t, cod){
   const vals = t.discs.map(d=>t.notas[d] && t.notas[d][cod]).filter(nIsNum);
   const calc = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
   const off = t.media ? t.media[cod] : null;
-  const med = (off!=null && off!=="") ? off : calc;
+  const med = vals.length > 0 ? ((off!=null && off!=="") ? off : calc) : null;
   const neg = vals.filter(v=>v<10).length;
   return { med, neg, n:vals.length };
 }
@@ -4472,7 +4554,7 @@ function nTurmaStats(t){
   const codes=Object.keys(t.roster); let H=0,M=0,withNeg=0,ms=0,mn=0;
   codes.forEach(c=>{ if(t.roster[c].sexo==="H")H++;else M++;
     const s=nStudentStats(t,c); if(s.neg>0)withNeg++; if(s.med!=null){ms+=s.med;mn++;} });
-  return { total:codes.length,H,M,withNeg,media: mn?Math.round(ms/mn):0 };
+  return { total:codes.length,H,M,withNeg,media: mn?Math.round(ms/mn):'—' };
 }
 const nAbbr = d => ({ "Português":"Por","Inglês":"Ing","Inglês Integral":"InI","Filosofia":"Fil","Matemática":"Mat",
   "TIC":"TIC","Ed. Física":"EdF","Francês":"Fra","História":"His","Psicopedagogia":"Psi","Geografia":"Geo",
@@ -4489,6 +4571,7 @@ function getTurmaVirtual(tk, tri){
   if(tri === 't1') return t;
   const vt = JSON.parse(JSON.stringify(t));
   vt.notas = {};
+  delete vt.media;
   (vt.discs || []).forEach(d => {
     vt.notas[d] = {};
     Object.keys(vt.roster || {}).forEach(cod => {
@@ -4704,7 +4787,10 @@ function printCartoes(cods){
   w.document.close();
 }
 function fichaTabBar(cod,active){
-  const tabs=[['dados','📋 Dados Anagráficos'],['notas','📊 Notas & Avaliações'],['fin','💳 Financeiro & Propinas'],['cartao','🪪 Cartão Estudante']];
+  let tabs=[['dados','📋 Dados Anagráficos'],['notas','📊 Notas & Avaliações'],['fin','💳 Financeiro & Propinas'],['cartao','🪪 Cartão Estudante']];
+  if(PREVIEW_ROLE === 'professor') {
+    tabs = tabs.filter(([k]) => k !== 'fin' && k !== 'cartao');
+  }
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;background:rgba(255,255,255,.12);padding:6px;border-radius:12px;border:1px solid rgba(255,255,255,.18)">${tabs.map(([k,l])=>`<button class="btn sm" style="flex:1;min-width:110px;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12.5px;border:none;cursor:pointer;transition:all .15s ease;background:${active===k?'#ffffff':'transparent'};color:${active===k?'#0f172a':'#ffffff'}" onclick="openAlunoFicha('${cod}','${k}')">${l}</button>`).join('')}</div>`;
 }
 
@@ -5319,7 +5405,9 @@ window.openNovoRegistoElegante = function(type = 'aluno') {
 };
 function openAlunoFicha(cod, tab){
   if(!NUI.alunoTri) NUI.alunoTri = NUI.pautaTri || 't1';
+  if(PREVIEW_ROLE === 'professor' && (tab === 'fin' || tab === 'cartao')) tab = 'dados';
   if(tab) FICHAUI.tab = tab;
+  if(PREVIEW_ROLE === 'professor' && (FICHAUI.tab === 'fin' || FICHAUI.tab === 'cartao')) FICHAUI.tab = 'dados';
   tab = FICHAUI.tab || 'dados';
 
   const tri = NUI.alunoTri;
@@ -6783,7 +6871,7 @@ const ROLES = {
 const ROLE_NAV = {
   direcao: '*',
   diretor:   ['diario','planificacao','salaVirtual','livropres','anag','classes','grid','tview','test','cadernetas','pautas','alunos','docs','transicao','arqanos','avisos'],
-  professor: ['diario','planificacao','salaVirtual','grid','tview','test','cadernetas','alunos','avisos'],
+  professor: ['diario','planificacao','salaVirtual','anag','grid','tview','test','cadernetas','pautas','alunos','docs','avisos'],
   secretaria:['anag','teachers','cta','classes','trimestres','calendario','financa','docs','archive','arqanos','avisos'],
   aluno:     ['salaVirtual','mural','grid','alunos'],
   encarregado:['dash','mural','grid','alunos','financa'],
@@ -6792,7 +6880,7 @@ const ROLE_NAV = {
 const ROLE_RELABEL = {
   aluno:      {grid:'O meu horário', alunos:'As minhas notas', mural:'Avisos', salaVirtual:'Sala Virtual'},
   encarregado:{dash:'Painel do educando', grid:'Horário do educando', alunos:'Notas do educando', financa:'Propinas', mural:'Avisos'},
-  professor:  {grid:'Os meus horários', tview:'O meu horário', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)', avisos:'Mural de Avisos'},
+  professor:  {grid:'Os meus horários', tview:'O meu horário', anag:'Lista de Alunos', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)', avisos:'Mural de Avisos'},
   diretor:    {alunos:'Notas da turma', pautas:'Pautas da turma', diario:'Diário de Aula', salaVirtual:'Sala Virtual (LMS)'},
 };
 let PREVIEW_ROLE = 'direcao';
@@ -9168,13 +9256,168 @@ function diSetTeacher(v){ PREVIEW_TEACHER=v; DIUI.sel=0; DIUI.manualSel=false; D
 function diSetTab(t){ DIUI.tab=t; render(); }
 function diSetDtTk(tk){ DIUI.dtTk=tk; render(); }
 
-function diToggle(id,cod){ const rec=diRecById(id); if(!rec)return; const f=rec.faltas;
+function diToggle(id,cod){ const rec=diRecById(id); if(!rec||rec.data>diIsoToday())return; const f=rec.faltas;
   if(!f[cod]) f[cod]={tipo:'F',motivo:''}; else if(f[cod].tipo==='F') f[cod].tipo='FJ'; else delete f[cod];
   rec.ts=Date.now(); persist(); render(); }
-function diMot(id,cod,v){ const rec=diRecById(id); if(!rec||!rec.faltas[cod])return; rec.faltas[cod].motivo=v; rec.ts=Date.now(); persist(); }
-function diAllPresent(id){ const rec=diRecById(id); if(!rec)return; rec.faltas={}; rec.ts=Date.now(); persist(); render(); }
-function diField(id,k,v){ const rec=diRecById(id); if(!rec)return; rec[k]=v; rec.ts=Date.now(); persist(); }
-function diSetState(id,cod,tipo){ const rec=diRecById(id); if(!rec)return; const f=rec.faltas; if(tipo==='P') delete f[cod]; else f[cod]={tipo:tipo,motivo:(f[cod]||{}).motivo||''}; rec.ts=Date.now(); persist(); render(); }
+function diMot(id,cod,v){ const rec=diRecById(id); if(!rec||rec.data>diIsoToday()||!rec.faltas[cod])return; rec.faltas[cod].motivo=v; rec.ts=Date.now(); persist(); }
+function diAllPresent(id){ const rec=diRecById(id); if(!rec||rec.data>diIsoToday())return; rec.faltas={}; rec.ts=Date.now(); persist(); render(); }
+function diField(id,k,v){ const rec=diRecById(id); if(!rec||rec.data>diIsoToday())return; rec[k]=v; rec.ts=Date.now(); persist(); }
+function diSetState(id,cod,tipo){ const rec=diRecById(id); if(!rec||rec.data>diIsoToday())return; const f=rec.faltas; if(tipo==='P') delete f[cod]; else f[cod]={tipo:tipo,motivo:(f[cod]||{}).motivo||''}; rec.ts=Date.now(); persist(); render(); }
+
+/* —— Próximas Aulas Agendadas (Perspectiva de Calendário) —— */
+function diUpcomingNextLessons(tid, count = 3){
+  if(!tid) return [];
+  const list = [];
+  const todayIso = diIsoToday();
+  const todayDate = new Date();
+  const z = n => String(n).padStart(2, '0');
+
+  for(let i = 1; i <= 14 && list.length < count; i++){
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() + i);
+    const iso = `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    const dia = DIA_BY_JS[d.getDay()];
+    if(!dia) continue;
+    const lessons = diLessons(tid, dia);
+    lessons.forEach(l => {
+      if(list.length < count){
+        list.push({ ...l, data: iso, diaTxt: DIA_FULL[dia] || dia });
+      }
+    });
+  }
+  return list;
+}
+
+/* —— Histórico de Aulas Registadas —— */
+function diPastRecordedLessons(tid, limit = 30){
+  const isDirecao = ['direcao','admin'].includes(PREVIEW_ROLE);
+  const recs = (DB.diario || []).filter(r => {
+    if(!r || !r.data) return false;
+    if(!isDirecao && r.tid !== tid) return false;
+    return true;
+  });
+  recs.sort((a,b) => b.data.localeCompare(a.data) || ((b.ts||0) - (a.ts||0)));
+  return recs.slice(0, limit);
+}
+
+function renderHistoricoHtml(tid){
+  const recs = diPastRecordedLessons(tid, 30);
+  if(!recs.length){
+    return `<div class="card card-p" style="text-align:center;padding:40px 20px;margin-top:10px">
+      <div style="font-size:38px;margin-bottom:10px">📜</div>
+      <h3 style="font-family:var(--serif);font-size:18px;font-weight:700;margin-bottom:6px">Sem histórico de aulas registadas</h3>
+      <p style="color:var(--txt-dim);font-size:13px;max-width:500px;margin:0 auto">Ainda não foram guardados registos de diário de aula anteriores para este professor.</p>
+    </div>`;
+  }
+
+  const itemsHtml = recs.map(r => {
+    const dia = diDiaFromIso(r.data);
+    const diaName = dia ? (DIA_FULL[dia] || dia) : '';
+    const faltasArr = Object.entries(r.faltas || {});
+    const nF = faltasArr.filter(([c,f]) => f.tipo==='F').length;
+    const nFJ = faltasArr.filter(([c,f]) => f.tipo==='FJ').length;
+    const rosterCount = diRoster(r.tk, r.grps).length;
+    const nP = Math.max(0, rosterCount - nF - nFJ);
+
+    return `<div style="background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 6px rgba(0,0,0,0.02)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="background:var(--navy);color:#fff;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800">Turma ${esc(r.tk)}</span>
+          <span style="font-size:14px;font-weight:800;color:var(--txt);font-family:var(--serif)">${esc(r.disc)}</span>
+          ${r.grps && r.grps.length ? `<span style="font-size:11px;color:var(--txt-dim);font-weight:700">(${r.grps.join('+')})</span>` : ''}
+        </div>
+        <div style="font-size:12px;color:var(--txt-dim);font-weight:600;background:var(--bg-body);padding:4px 10px;border-radius:6px;border:1px solid var(--line)">
+          📅 <b>${diFmtData(r.data)}</b> (${diaName}) · ${r.horario||''}
+        </div>
+      </div>
+
+      <div style="font-size:13.5px;color:var(--txt);font-weight:500;background:var(--bg-body);padding:10px 14px;border-radius:8px;border:1px solid var(--line)">
+        <b style="color:var(--txt-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Tema / Sumário:</b><br>
+        <span style="font-weight:600">${esc(r.tema || '— Nenhum tema especificado —')}</span>
+        ${r.obs ? `<div style="margin-top:6px;font-size:12px;color:var(--txt-dim);border-top:1px dashed var(--line);padding-top:4px"><b>Obs:</b> ${esc(r.obs)}</div>` : ''}
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="background:var(--emerald-light);color:var(--emerald);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🟢 ${nP} Presentes</span>
+          <span style="background:var(--rose-light);color:var(--rose);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🔴 ${nF} Faltas</span>
+          ${nFJ ? `<span style="background:var(--amber-light);color:var(--amber);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🟡 ${nFJ} Justificadas</span>` : ''}
+        </div>
+        <button class="btn sm ghost pri" onclick="diSetData('${r.data}'); diSetTab('aula');" style="font-weight:700">
+          ✏️ Ver / Editar Registo
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <h3 style="font-family:var(--serif);font-size:18px;font-weight:800;margin:0">📜 Histórico de Aulas Registadas</h3>
+        <p style="font-size:13px;color:var(--txt-dim);margin:2px 0 0">Consulte e edite os registos e assiduidades das aulas leccionadas anteriormente.</p>
+      </div>
+    </div>
+    ${itemsHtml}
+  `;
+}
+
+function renderProximasHtml(tid){
+  const upcoming = diUpcomingNextLessons(tid, 6);
+  if(!upcoming.length){
+    return `<div class="card card-p" style="text-align:center;padding:40px 20px;margin-top:10px">
+      <div style="font-size:38px;margin-bottom:10px">📅</div>
+      <h3 style="font-family:var(--serif);font-size:18px;font-weight:700;margin-bottom:6px">Sem próximas aulas agendadas</h3>
+      <p style="color:var(--txt-dim);font-size:13px;max-width:500px;margin:0 auto">Não foram encontradas futuras aulas atribuídas a este professor nos próximos 14 dias.</p>
+    </div>`;
+  }
+
+  const cardsHtml = upcoming.map((l, idx) => {
+    const isTop3 = idx < 3;
+    return `<div style="background:var(--bg-card);border:1.5px solid ${isTop3?'var(--navy)':'var(--line)'};border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:${isTop3?'var(--navy)':'var(--bg-body)'};color:${isTop3?'#fff':'var(--txt)'};border:1px solid var(--line);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800">
+            ${idx === 0 ? '⭐️ Próxima Aula' : `Aula #${idx+1}`}
+          </span>
+          <span style="font-size:13.5px;font-weight:700;color:var(--txt)">📅 ${l.diaTxt}, ${diFmtData(l.data)}</span>
+        </div>
+        <span style="background:var(--amber-light);color:#92400e;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;border:1px solid var(--amber)33">
+          🔒 Bloqueado (Sem registo antecipado)
+        </span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="padding:10px 14px;background:var(--bg-body);border-radius:8px;border:1px solid var(--line);font-size:14px;font-weight:800;color:var(--navy)">
+          ⏰ ${l.slot.s} – ${l.slot.e}
+        </div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:var(--txt)">${esc(l.disc)}</div>
+          <div style="font-size:12.5px;color:var(--txt-dim);font-weight:600;margin-top:2px">
+            Turma ${esc(l.tk)} ${l.grps&&l.grps.length?`· Secção ${l.grps.join('+')}`:''}
+          </div>
+        </div>
+        <button class="btn sm ghost pri" onclick="diSetData('${l.data}'); diSetTab('aula');" style="font-weight:700">
+          👁️ Ver no Calendário (${diFmtData(l.data)})
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-bottom:18px;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.02)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:24px">📅</span>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:17px;font-weight:800;margin:0">Próximas Aulas no Calendário (Perspectiva)</h3>
+          <p style="font-size:13px;color:var(--txt-dim);margin:2px 0 0">
+            Abaixo estão agendadas as suas <b>próximas aulas</b>. Por normas regulamentares, a marcação de presenças e lançamento de sumários só estará ativa no próprio dia da aula.
+          </p>
+        </div>
+      </div>
+    </div>
+    ${cardsHtml}
+  `;
+}
 
 /* —— Director de Turma: Gestão & Justificativos de Faltas —— */
 function openDtJustificarModal(tk, cod){
@@ -9355,21 +9598,39 @@ VIEWS.diario=function(r){
   if(activeTab === 'dt_painel' && !isDT) activeTab = 'aula';
   if(activeTab === 'dt_sumarios' && !canSeeSumarios) activeTab = 'aula';
 
-  const navTabs = (isDT || canSeeSumarios) ? `
-    <div style="display:flex;gap:10px;border-bottom:2px solid var(--line);margin-bottom:20px;padding-bottom:2px;overflow-x:auto">
-      <button onclick="diSetTab('aula')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='aula'?'var(--navy)':'transparent'};color:${activeTab==='aula'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='aula'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
-        <span style="font-size:16px">📖</span> Aula do Dia (Registo)
+  const navTabs = `
+    <div style="display:flex;gap:8px;border-bottom:2px solid var(--line);margin-bottom:20px;padding-bottom:2px;overflow-x:auto">
+      <button onclick="diSetTab('aula')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='aula'?'var(--navy)':'transparent'};color:${activeTab==='aula'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='aula'?'800':'600'};font-size:14px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:16px">📖</span> Aula do Dia
+      </button>
+      <button onclick="diSetTab('historico')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='historico'?'var(--navy)':'transparent'};color:${activeTab==='historico'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='historico'?'800':'600'};font-size:14px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:16px">📜</span> Histórico de Aulas
+      </button>
+      <button onclick="diSetTab('proximas')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='proximas'?'var(--navy)':'transparent'};color:${activeTab==='proximas'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='proximas'?'800':'600'};font-size:14px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:16px">📅</span> Próximas Aulas (Agenda)
       </button>
       ${isDT ? `
-      <button onclick="diSetTab('dt_painel')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_painel'?'var(--navy)':'transparent'};color:${activeTab==='dt_painel'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_painel'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
-        <span style="font-size:16px">👔</span> Painel Director de Turma ${myDtTk ? `<span style="background:var(--emerald);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700">DT ${myDtTk}</span>` : ''}
+      <button onclick="diSetTab('dt_painel')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_painel'?'var(--navy)':'transparent'};color:${activeTab==='dt_painel'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_painel'?'800':'600'};font-size:14px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:16px">👔</span> Painel DT ${myDtTk ? `<span style="background:var(--emerald);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700">DT ${myDtTk}</span>` : ''}
       </button>` : ''}
       ${canSeeSumarios ? `
-      <button onclick="diSetTab('dt_sumarios')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_sumarios'?'var(--navy)':'transparent'};color:${activeTab==='dt_sumarios'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_sumarios'?'800':'600'};font-size:14px;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap">
-        <span style="font-size:16px">📊</span> Monitorização de Sumários
+      <button onclick="diSetTab('dt_sumarios')" style="background:none;border:none;border-bottom:3px solid ${activeTab==='dt_sumarios'?'var(--navy)':'transparent'};color:${activeTab==='dt_sumarios'?'var(--navy)':'var(--txt-dim)'};font-weight:${activeTab==='dt_sumarios'?'800':'600'};font-size:14px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:16px">📊</span> Monitorização Sumários
       </button>` : ''}
     </div>
-  ` : '';
+  `;
+
+  const tid=currentTeacherId();
+
+  if(activeTab === 'historico'){
+    r.innerHTML = `<div class="vhead"><h1>Diário de Aula</h1><p>Histórico e registos de aulas leccionadas anteriormente.</p></div>` + navTabs + renderHistoricoHtml(tid);
+    return;
+  }
+
+  if(activeTab === 'proximas'){
+    r.innerHTML = `<div class="vhead"><h1>Diário de Aula</h1><p>Perspectiva e calendário das suas próximas aulas agendadas.</p></div>` + navTabs + renderProximasHtml(tid);
+    return;
+  }
 
   if(activeTab === 'dt_painel' && isDT){
     r.innerHTML = `<div class="vhead"><h1>Diário de Aula</h1><p>Painel do Director de Turma — Controlo de Assiduidade e Justificativos.</p></div>` + navTabs + renderDtPainelHtml();
@@ -9382,7 +9643,6 @@ VIEWS.diario=function(r){
   }
 
   // --- ABA: AULA DO DIA ---
-  const tid=currentTeacherId();
   if(!DIUI.data) DIUI.data=diDefaultData(tid);
   const data=DIUI.data, dia=diDiaFromIso(data);
   const lessons=diLessons(tid,dia);
@@ -9397,6 +9657,7 @@ VIEWS.diario=function(r){
   const hojeBtn=`<button class="btn sm" onclick="diSetData(diIsoToday())">Hoje</button>`;
   const diaTxt = dia? (DIA_FULL[dia]||dia) : 'Fim-de-semana';
   const ehHoje = data===diIsoToday();
+  const isFuture = data > diIsoToday();
 
   if(ehHoje && !DIUI.manualSel && lessons.length > 0){
     const now = new Date();
@@ -9420,23 +9681,34 @@ VIEWS.diario=function(r){
         <div style="font-size:11px;font-weight:800;color:var(--txt-dim);text-transform:uppercase;letter-spacing:0.8px;width:80px">Data</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${dateSel}${hojeBtn}</div>
         <div style="margin-left:auto;font-size:13px;color:var(--txt-dim);font-weight:500;padding:6px 12px;background:var(--bg-body);border-radius:6px;border:1px solid var(--line)">
-          <b style="color:var(--txt)">${diaTxt}</b>${ehHoje?' <span style="color:var(--emerald)">· hoje</span>':''} — ${diFmtData(data)}
+          <b style="color:var(--txt)">${diaTxt}</b>${ehHoje?' <span style="color:var(--emerald)">· hoje</span>':isFuture?' <span style="color:var(--amber)">· futura</span>':''} — ${diFmtData(data)}
         </div>
       </div>
     </div>`;
 
+  if(isFuture){
+    head += `
+      <div style="background:var(--amber-light);border:1px solid var(--amber);color:#78350f;padding:14px 18px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <span style="font-size:22px">🔒</span>
+        <div>
+          <b>Aula Futura Agendada (${diFmtData(data)})</b><br>
+          <span style="font-weight:500;opacity:0.9">Por normas pedagógicas e regulamentares, o registo de presenças e lançamento do sumário só estará disponível no próprio dia da aula.</span>
+        </div>
+      </div>
+    `;
+  }
+
   if(!lessons.length){
-    const monIso = lpMondayOf(data);
     const dtBtn = isDT ? `<button class="btn gold" onclick="diSetTab('dt_painel')">👔 Ver Painel Director de Turma</button>` : '';
-    r.innerHTML=head+`<div class="card card-p" style="text-align:center;padding:40px 20px">
+    r.innerHTML=head+`<div class="card card-p" style="text-align:center;padding:32px 20px;margin-bottom:24px">
       <div style="font-size:38px;margin-bottom:10px">📅</div>
       <h3 style="font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:6px">${dia ? `Sem aulas agendadas para ${esc(teacherLabel(getTeacher(tid)))} na ${esc(diaTxt.toLowerCase())}` : 'Dia sem aulas (fim-de-semana)'}</h3>
       <p style="color:var(--txt-dim);font-size:13px;max-width:500px;margin:0 auto 20px">No dia ${diFmtData(data)} (${diaTxt.toLowerCase()}) não há aulas registadas no horário para este professor.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="btn pri" onclick="diSetData('${monIso}')">📅 Ver Aulas de Segunda-feira (${diFmtData(monIso)})</button>
+        <button class="btn pri" onclick="diSetData(diIsoToday())">📅 Ir para Hoje (${diFmtData(diIsoToday())})</button>
         ${dtBtn}
       </div>
-    </div>`;
+    </div>` + renderProximasHtml(tid);
     return;
   }
 
@@ -9463,7 +9735,7 @@ VIEWS.diario=function(r){
     const f=(rec.faltas||{})[s.cod]; const st=!f?'P':f.tipo;
     const isP=st==='P', isF=st==='F', isJ=st==='FJ';
 
-    const toggleHtml = `<div style="display:flex;background:var(--bg-body);border:1px solid var(--line);border-radius:24px;padding:3px;gap:2px">
+    const toggleHtml = isFuture ? `<span style="font-size:11px;font-weight:700;color:var(--txt-dim);background:var(--bg-body);padding:5px 12px;border-radius:16px;border:1px solid var(--line)">🔒 Bloqueado</span>` : `<div style="display:flex;background:var(--bg-body);border:1px solid var(--line);border-radius:24px;padding:3px;gap:2px">
       <button onclick="diSetState('${rec.id}','${s.cod}','P')" style="border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:${isP?'800':'600'};cursor:pointer;background:${isP?'var(--emerald)':'transparent'};color:${isP?'#fff':'var(--txt-dim)'};transition:all .2s;box-shadow:${isP?'0 2px 5px rgba(16,185,129,0.3)':'none'}">P</button>
       <button onclick="diSetState('${rec.id}','${s.cod}','F')" style="border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:${isF?'800':'600'};cursor:pointer;background:${isF?'var(--rose)':'transparent'};color:${isF?'#fff':'var(--txt-dim)'};transition:all .2s;box-shadow:${isF?'0 2px 5px rgba(244,63,94,0.3)':'none'}">F</button>
       <button onclick="diSetState('${rec.id}','${s.cod}','FJ')" style="border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:${isJ?'800':'600'};cursor:pointer;background:${isJ?'var(--amber)':'transparent'};color:${isJ?'#fff':'var(--txt-dim)'};transition:all .2s;box-shadow:${isJ?'0 2px 5px rgba(245,158,11,0.3)':'none'}">J</button>
@@ -9479,7 +9751,7 @@ VIEWS.diario=function(r){
         </div>
         ${toggleHtml}
       </div>
-      ${isJ?`<div style="padding:0 14px 12px 14px;animation:fadein .3s ease"><input value="${esc(f.motivo||'')}" placeholder="Motivo da justificação (opcional)" onchange="diMot('${rec.id}','${s.cod}',this.value)" style="width:100%;max-width:420px;padding:8px 12px;border:1px solid var(--amber);border-radius:8px;font-size:13px;background:#fff;color:var(--txt);outline:none;box-shadow:0 0 0 2px var(--amber-light)"></div>`:''}
+      ${isJ?`<div style="padding:0 14px 12px 14px;animation:fadein .3s ease"><input value="${esc(f.motivo||'')}" ${isFuture?'disabled':''} placeholder="Motivo da justificação (opcional)" onchange="diMot('${rec.id}','${s.cod}',this.value)" style="width:100%;max-width:420px;padding:8px 12px;border:1px solid var(--amber);border-radius:8px;font-size:13px;background:#fff;color:var(--txt);outline:none;box-shadow:0 0 0 2px var(--amber-light)"></div>`:''}
     </div>`;
   }).join('');
 
@@ -9505,8 +9777,8 @@ VIEWS.diario=function(r){
 
       <!-- ALUNOS LIST -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--bg-card);border-bottom:1px solid var(--line)">
-        <span style="font-size:12px;color:var(--txt-dim);font-weight:500">Toque nel bottone per marcare presenze o giustificazioni.</span>
-        <button class="btn sm ghost pri" onclick="diAllPresent('${rec.id}')">Marcar todos presentes</button>
+        <span style="font-size:12px;color:var(--txt-dim);font-weight:500">${isFuture?'🔒 O registo de presenças está bloqueado para aulas futuras.':'Toque no botão para marcar presenças ou justificações.'}</span>
+        ${isFuture ? `<span style="font-size:11px;font-weight:700;color:var(--amber)">🔒 Registo Desativado</span>` : `<button class="btn sm ghost pri" onclick="diAllPresent('${rec.id}')">Marcar todos presentes</button>`}
       </div>
 
       <div style="max-height:550px;overflow-y:auto;background:var(--bg-card)">${rows||'<div class="empty" style="padding:32px">Sem alunos nesta turma/secção.</div>'}</div>
@@ -9516,16 +9788,16 @@ VIEWS.diario=function(r){
         <div style="display:flex;gap:16px;flex-wrap:wrap">
           <div style="flex:1;min-width:300px">
             <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--txt-dim);text-transform:uppercase;margin-bottom:6px">Tema da Aula (Sumário)</label>
-            <input value="${esc(rec.tema||'')}" onchange="diField('${rec.id}','tema',this.value)" placeholder="Descreva o tema desenvolvido na aula" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--txt);outline:none;transition:border .2s" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--line)'">
+            <input value="${esc(rec.tema||'')}" ${isFuture?'disabled':''} onchange="diField('${rec.id}','tema',this.value)" placeholder="${isFuture?'Lançamento de sumário disponível no dia da aula':'Descreva o tema desenvolvido na aula'}" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:${isFuture?'var(--bg-body)':'var(--bg-card)'};color:var(--txt);outline:none;transition:border .2s" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--line)'">
           </div>
           <div style="width:220px">
             <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--txt-dim);text-transform:uppercase;margin-bottom:6px">Tipo de Aula</label>
-            <select onchange="diField('${rec.id}','tipo',this.value)" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--txt);outline:none">${tipoOpts}</select>
+            <select ${isFuture?'disabled':''} onchange="diField('${rec.id}','tipo',this.value)" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:${isFuture?'var(--bg-body)':'var(--bg-card)'};color:var(--txt);outline:none">${tipoOpts}</select>
           </div>
         </div>
         <div>
           <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--txt-dim);text-transform:uppercase;margin-bottom:6px">Observações / Ocorrências</label>
-          <textarea onchange="diField('${rec.id}','obs',this.value)" rows="2" placeholder="Notas sobre o decorrer da aula, faltas de material, comportamento…" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;resize:vertical;background:var(--bg-card);color:var(--txt);outline:none;transition:border .2s" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--line)'">${esc(rec.obs||'')}</textarea>
+          <textarea ${isFuture?'disabled':''} onchange="diField('${rec.id}','obs',this.value)" rows="2" placeholder="${isFuture?'Notas disponíveis no dia da aula':'Notas sobre o decorrer da aula, faltas de material, comportamento…'}" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;resize:vertical;background:${isFuture?'var(--bg-body)':'var(--bg-card)'};color:var(--txt);outline:none;transition:border .2s" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--line)'">${esc(rec.obs||'')}</textarea>
         </div>
       </div>
     </div>
