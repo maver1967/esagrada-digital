@@ -8261,12 +8261,12 @@ function plRenderDiario(key,tid,tk,disc,triObj,cls){
   if(typeof PLUI.qIdx!=='number'||PLUI.qIdx<0||PLUI.qIdx>=pairs.length) PLUI.qIdx=null;
   const pwReal=lessonsPerWeekTk(tk,disc);
   const chips=pairs.map((p,i)=>{ const on=i===PLUI.qIdx; const per=p.periodo.ini?`${p.periodo.ini} – ${p.periodo.fim}`:p.label;
-    return `<button onclick="plSetQ(${i})" style="border:1px solid ${on?'#26324a':'var(--line)'};background:${on?'#26324a':'#fff'};color:${on?'#fff':'#26324a'};border-radius:10px;padding:8px 12px;cursor:pointer;font-size:12.5px;font-weight:600">${i+1}ª Quinzena <span style="opacity:.7;font-weight:400">· ${esc(per)}</span></button>`;
+    return `<button onclick="plSetQ(${i})" style="border:1px solid ${on?'var(--brand-blue,#2563eb)':'var(--border-color,#cbd5e1)'};background:${on?'var(--brand-blue,#2563eb)':'var(--surface,#ffffff)'};color:${on?'#ffffff!important':'var(--title-color,#0f172a)!important'};border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:800;transition:all 0.15s">${i+1}ª Quinzena <span style="opacity:0.85;font-weight:600">· ${esc(per)}</span></button>`;
   }).join('');
 
   let html=`<div class="card" style="padding:14px 16px;margin-bottom:14px">
-    <div style="font-size:13px;color:#26324a;margin-bottom:6px">Escolha a quinzena; depois prepare cada aula separadamente.</div>
-    <div style="font-size:12px;color:#888;margin-bottom:10px">${pwReal?`Pelo horário: <b>${pwReal} aula(s)/semana</b> → <b>${pwReal*2} aulas</b> por quinzena.`:`<span style="color:#b8902a">Sem horário para esta turma/disciplina — nº de aulas estimado do analítico.</span>`}</div>
+    <div style="font-size:13.5px;color:var(--title-color,#0f172a);font-weight:700;margin-bottom:6px">Escolha a quinzena; depois prepare cada aula separadamente.</div>
+    <div style="font-size:12.5px;color:var(--text-muted,#64748b);margin-bottom:12px;font-weight:600">${pwReal?`Pelo horário: <b>${pwReal} aula(s)/semana</b> → <b>${pwReal*2} aulas</b> por quinzena.`:`<span style="color:#d97706">Sem horário para esta turma/disciplina — nº de aulas estimado do analítico.</span>`}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${chips}</div></div>`;
   if(PLUI.qIdx===null) return html+`<div class="card"><div class="empty">${I.doc}<div>Seleccione uma quinzena.</div></div></div>`;
 
@@ -8277,13 +8277,19 @@ function plRenderDiario(key,tid,tk,disc,triObj,cls){
     const temaPrev=((ex?ex.tema:(L.src.cont||'').split('\n')[0])||'').slice(0,80);
     const onclick = ex ? `plDiOpen('${ex.id}')`
       : `plDiCreate('${key}','${triObj.id}',${PLUI.qIdx},'${esc(String(L.num))}','${esc(tk)}','${esc(disc)}','${tid}')`;
-    return `<div class="card" style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <div style="display:flex;align-items:center;gap:12px;min-width:0">
-        <div style="width:34px;height:34px;border-radius:50%;background:#eef1f6;display:flex;align-items:center;justify-content:center;font-weight:700;color:#26324a;flex-shrink:0">${k+1}</div>
-        <div style="min-width:0"><div style="font-weight:700;font-size:13.5px;color:#26324a">Aula ${k+1} — Lição nº ${esc(String(L.num)||'—')}${ex?' <span style="color:#2ec26b;font-size:11px">✓</span>':''}</div>
-        <div style="font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(temaPrev||'(sem tema)')}</div></div>
+    return `<div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--border-color,#e2e8f0);border-radius:14px;background:var(--card-bg,#ffffff);box-shadow:var(--shadow-card)">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--surface-2,#f1f5f9);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:var(--title-color,#0f172a);border:1px solid var(--border-color,#cbd5e1);flex-shrink:0">${k+1}</div>
+        <div style="min-width:0">
+          <div style="font-weight:800;font-size:14.5px;color:var(--title-color,#0f172a)">
+            Aula ${k+1} — Lição nº ${esc(String(L.num)||'—')}${ex?' <span style="color:#10b981;font-size:13px;font-weight:800">✓</span>':''}
+          </div>
+          <div style="font-size:12.5px;color:var(--text-muted,#64748b);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">
+            ${esc(temaPrev||'(sem tema)')}
+          </div>
+        </div>
       </div>
-      <button class="btn sm ${ex?'':'em'}" onclick="${onclick}">${ex?'Abrir / editar':'Criar Plano de Aula'}</button>
+      <button class="btn sm ${ex?'':'em'}" onclick="${onclick}" style="border-radius:10px;font-weight:700;flex-shrink:0">${ex?'Abrir / editar':'Criar Plano de Aula'}</button>
     </div>`;
   }).join('');
   html+=`<div style="display:flex;flex-direction:column;gap:9px">${cards2}</div>`;
