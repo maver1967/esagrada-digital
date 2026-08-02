@@ -8705,54 +8705,94 @@ Estrutura cada lição com:
   `);
 }
 
-/* —— Impressão fiel ao modelo (landscape, Times New Roman) —— */
-function pdPrint(id){
-  const d=pdById(id); if(!d)return;
+function buildPdHtml(d){
   const line='_______________________';
-  const F=d.func.map(fr=>`<tr>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.4pt;font-weight:bold;vertical-align:top">${esc(fr.fn)}<br><span style="font-weight:normal">${esc(fr.tempo||'')}'</span></td>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.2pt;vertical-align:top;white-space:pre-wrap">${esc(fr.cont||'')}</td>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.2pt;vertical-align:top;white-space:pre-wrap">${esc(fr.actP||'')}</td>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.2pt;vertical-align:top;white-space:pre-wrap">${esc(fr.actA||'')}</td>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.2pt;vertical-align:top;white-space:pre-wrap">${esc(fr.met||'')}</td>
-    <td style="border:1px solid #000;padding:3px 5px;font-size:8.2pt;vertical-align:top;white-space:pre-wrap">${esc(fr.mat||'')}</td></tr>`).join('');
-  const html=`<div style="font-family:'Times New Roman',Times,serif;color:#000;font-size:12pt">
-    <table style="border-collapse:collapse;margin-left:auto;margin-bottom:2px"><tr><td style="border:1px solid #000;padding:3px 7px;font-size:10pt">Visto&nbsp;&nbsp;O(A) DAP: ____________________&nbsp;&nbsp;_____/_____/_______</td></tr></table>
-    <div style="text-align:center;font-weight:bold;font-size:14pt">Plano de Aula</div>
-    <div style="text-align:center;font-weight:bold;margin-bottom:6px">Escola Pré-Universitária Sagrada Família – Maxixe</div>
-    <table style="width:100%;font-size:11pt;border-collapse:collapse"><tr>
-      <td style="padding:1px 4px"><b>Data:</b> ${esc(iso2dmy(d.data)||'____/____/______')}</td>
-      <td style="padding:1px 4px;text-align:right"><b>Classe:</b> ${esc(d.classe)}&nbsp;&nbsp;<b>Turma:</b> ${esc(d.turma)}</td></tr>
-      <tr><td style="padding:1px 4px"><b>Nome do(a) professor(a):</b> ${esc(d.prof)}</td>
-      <td style="padding:1px 4px;text-align:right"><b>Duração da aula:</b> ${esc(d.duracao||'45')} min</td></tr>
-      <tr><td style="padding:1px 4px"><b>Disciplina:</b> ${esc(d.disc)}</td>
-      <td style="padding:1px 4px;text-align:right"><b>Tipo de aula:</b> ${esc(d.tipo||line)}</td></tr>
-      <tr><td style="padding:1px 4px"><b>Unidade temática:</b> ${esc(d.ut)}</td>
-      <td style="padding:1px 4px;text-align:right"><b>Lição nº:</b> ${esc(d.licao)}</td></tr>
-      <tr><td style="padding:1px 4px"><b>Tema:</b> ${esc(d.tema)}</td>
-      <td style="padding:1px 4px;text-align:right"><b>Nº de Alunos da Turma:</b> ${esc(d.nAlunos)}</td></tr>
+  const F=(d.func||[]).map(fr=>`<tr>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;font-weight:bold;vertical-align:top">${esc(fr.fn)}<br><span style="font-weight:normal">${esc(fr.tempo||'')}'</span></td>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;white-space:pre-wrap">${esc(fr.cont||'')}</td>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;white-space:pre-wrap">${esc(fr.actP||'')}</td>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;white-space:pre-wrap">${esc(fr.actA||'')}</td>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;white-space:pre-wrap">${esc(fr.met||'')}</td>
+    <td style="border:1px solid #000;padding:4px 6px;font-size:9pt;vertical-align:top;white-space:pre-wrap">${esc(fr.mat||'')}</td></tr>`).join('');
+  return `<div style="font-family:'Times New Roman',Times,serif;color:#000;font-size:12pt;background:#fff;padding:24px">
+    <table style="border-collapse:collapse;margin-left:auto;margin-bottom:6px"><tr><td style="border:1px solid #000;padding:4px 8px;font-size:10pt">Visto&nbsp;&nbsp;O(A) DAP: ____________________&nbsp;&nbsp;_____/_____/_______</td></tr></table>
+    <div style="text-align:center;font-weight:bold;font-size:15pt">Plano de Aula</div>
+    <div style="text-align:center;font-weight:bold;margin-bottom:10px;font-size:13pt">Escola Pré-Universitária Sagrada Família – Maxixe</div>
+    <table style="width:100%;font-size:11.5pt;border-collapse:collapse;margin-bottom:8px"><tr>
+      <td style="padding:2px 4px"><b>Data:</b> ${esc(iso2dmy(d.data)||'____/____/______')}</td>
+      <td style="padding:2px 4px;text-align:right"><b>Classe:</b> ${esc(d.classe)}&nbsp;&nbsp;<b>Turma:</b> ${esc(d.turma)}</td></tr>
+      <tr><td style="padding:2px 4px"><b>Nome do(a) professor(a):</b> ${esc(d.prof)}</td>
+      <td style="padding:2px 4px;text-align:right"><b>Duração da aula:</b> ${esc(d.duracao||'45')} min</td></tr>
+      <tr><td style="padding:2px 4px"><b>Disciplina:</b> ${esc(d.disc)}</td>
+      <td style="padding:2px 4px;text-align:right"><b>Tipo de aula:</b> ${esc(d.tipo||line)}</td></tr>
+      <tr><td style="padding:2px 4px"><b>Unidade temática:</b> ${esc(d.ut)}</td>
+      <td style="padding:2px 4px;text-align:right"><b>Lição nº:</b> ${esc(d.licao)}</td></tr>
+      <tr><td style="padding:2px 4px"><b>Tema:</b> ${esc(d.tema)}</td>
+      <td style="padding:2px 4px;text-align:right"><b>Nº de Alunos da Turma:</b> ${esc(d.nAlunos)}</td></tr>
     </table>
-    <div style="font-size:11pt;margin:4px 0"><b>Objectivos específicos:</b> ${esc(d.obj).replace(/\n/g,'<br>')}</div>
-    <div style="font-size:11pt;margin:4px 0"><b>Resultados de Aprendizagem:</b> ${esc(d.res).replace(/\n/g,'<br>')}</div>
+    <div style="font-size:11.5pt;margin:6px 0"><b>Objectivos específicos:</b> ${esc(d.obj||'').replace(/\n/g,'<br>')}</div>
+    <div style="font-size:11.5pt;margin:6px 0 10px"><b>Resultados de Aprendizagem:</b> ${esc(d.res||'').replace(/\n/g,'<br>')}</div>
     <table style="border-collapse:collapse;width:100%;table-layout:fixed"><colgroup><col style="width:16%"><col style="width:18%"><col style="width:20%"><col style="width:16%"><col style="width:15%"><col style="width:15%"></colgroup>
       <thead>
-        <tr><th rowspan="2" style="border:1px solid #000;padding:3px;font-size:9pt">Funções Didácticas e Tempo</th>
-            <th rowspan="2" style="border:1px solid #000;padding:3px;font-size:9pt">Conteúdos</th>
-            <th colspan="2" style="border:1px solid #000;padding:3px;font-size:9pt">Actividades</th>
-            <th rowspan="2" style="border:1px solid #000;padding:3px;font-size:9pt">Método/Técnica de Ensino</th>
-            <th rowspan="2" style="border:1px solid #000;padding:3px;font-size:9pt">Material Didáctico</th></tr>
-        <tr><th style="border:1px solid #000;padding:3px;font-size:9pt">Professor/a</th><th style="border:1px solid #000;padding:3px;font-size:9pt">Alunos</th></tr>
+        <tr><th rowspan="2" style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Funções Didácticas e Tempo</th>
+            <th rowspan="2" style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Conteúdos</th>
+            <th colspan="2" style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Actividades</th>
+            <th rowspan="2" style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Método/Técnica de Ensino</th>
+            <th rowspan="2" style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Material Didáctico</th></tr>
+        <tr><th style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Professor/a</th><th style="border:1px solid #000;padding:4px;font-size:9.5pt;background:#f5f5f5">Alunos</th></tr>
       </thead><tbody>${F}</tbody></table>
-    <div style="font-weight:bold;font-size:11pt;margin-top:8px">Quadro mural incluindo exercícios e TPC</div>
-    <table style="border-collapse:collapse;width:100%"><tr><td style="border:1px solid #000;padding:6px 8px;font-size:10.5pt;white-space:pre-wrap;min-height:50px">${esc(d.quadro||'')}${d.tpc?('\n\nTPC: '+esc(d.tpc)):''}</td></tr></table>
-    <div style="font-size:8.5pt;margin-top:4px">*Os 40 minutos aplicam-se nas escolas com regime de três turnos.</div>
+    <div style="font-weight:bold;font-size:11.5pt;margin-top:10px">Quadro mural incluindo exercícios e TPC</div>
+    <table style="border-collapse:collapse;width:100%;margin-top:4px"><tr><td style="border:1px solid #000;padding:6px 8px;font-size:10.5pt;white-space:pre-wrap;min-height:50px">${esc(d.quadro||'')}${d.tpc?('\n\nTPC: '+esc(d.tpc)):''}</td></tr></table>
+    <div style="font-size:8.5pt;margin-top:6px">*Os 40 minutos aplicam-se nas escolas com regime de três turnos.</div>
   </div>`;
-  let pr=$('#printRoot'); if(!pr){pr=document.createElement('div');pr.id='printRoot';document.body.appendChild(pr);}
-  pr.innerHTML=html; setPrintOrient(false);
-  document.body.classList.add('printing');
-  const done=()=>{document.body.classList.remove('printing');pr.innerHTML='';window.removeEventListener('afterprint',done);};
-  window.addEventListener('afterprint',done);
-  setTimeout(()=>window.print(),90);
+}
+
+async function pdPrint(id){
+  const d=pdById(id); if(!d)return;
+  toast('A gerar documento PDF…');
+  let stage=$('#exportStage');
+  if(!stage){ stage=document.createElement('div'); stage.id='exportStage'; document.body.appendChild(stage); }
+  stage.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;visibility:hidden;pointer-events:none';
+  stage.innerHTML=`<div id="pdPdfDoc" style="width:1180px;background:#ffffff;color:#000000;box-sizing:border-box">${buildPdHtml(d)}</div>`;
+
+  try {
+    const el = stage.firstElementChild;
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1180 });
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const M = 6, aw = pw - M*2, ah = ph - M*2;
+    let w = aw, h = canvas.height * (aw / canvas.width);
+    if(h > ah){ h = ah; w = canvas.width * (ah / canvas.height); }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w)/2, M, w, h);
+
+    const safeDisc = (d.disc||'Plano').replace(/[\/\\:*?"<>|]/g, '_');
+    const safeTurma = (d.turma||'Turma').replace(/[\/\\:*?"<>|]/g, '_');
+    const fileName = `Plano_de_Aula_Licao_${d.licao||'X'}_${safeDisc}_${safeTurma}.pdf`;
+
+    const pdfBlob = pdf.output('blob');
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+          text: `Plano de Aula - Lição ${d.licao} (${d.disc})`
+        });
+        toast('PDF gerado e partilhado ✓');
+        stage.innerHTML = '';
+        return;
+      } catch(shareErr){}
+    }
+
+    pdf.save(fileName);
+    toast('PDF descarregado com sucesso ✓');
+  } catch(err){
+    console.error('Erro ao gerar PDF:', err);
+    toast('Erro ao gerar PDF', true);
+  } finally {
+    stage.innerHTML = '';
+  }
 }
 
 
@@ -8932,37 +8972,76 @@ function plRenderQuinzenal(key,tid,tk,disc,triObj,cls){
 
 /* helper "Elaborar com IA" removido temporariamente — rever mais tarde */
 
-/* —— Impressão fiel ao modelo (landscape, Times New Roman) —— */
-function quinzPrint(id){
-  const q=quinzById(id); if(!q)return;
+function buildQuinzHtml(q){
   const cls=NOTAS.turmas[plTkOf(q)]||{};
   const COLS=[['ut','Unidade Temática'],['sem','Semana'],['lic','Nº de Lição'],['obj','Objectivos Específicos'],['cont','Conteúdos'],['res','Resultados de aprendizagem'],['met','Métodos de ensino'],['mat','Material Didáctico']];
-  const th=COLS.map(c=>`<th style="border:1px solid #000;padding:3px 4px;font-size:9pt;font-weight:bold;text-align:center">${c[1]}</th>`).join('');
-  const trs=q.rows.map(r=>`<tr>${COLS.map(c=>`<td style="border:1px solid #000;padding:3px 5px;font-size:8.6pt;vertical-align:top;white-space:pre-wrap;${(c[0]==='lic')?'text-align:center;':''}">${esc(r[c[0]]||'')}</td>`).join('')}</tr>`).join('');
-  const html=`<div style="font-family:'Times New Roman',Times,serif;color:#000">
-    <table style="border-collapse:collapse;margin-left:auto;margin-bottom:4px"><tr><td style="border:1px solid #000;padding:4px 8px;font-size:10pt">Visto&nbsp;&nbsp;O(A) DAP: ________________________&nbsp;&nbsp;_____/_____/_______</td></tr></table>
-    <div style="text-align:center;line-height:1.3;font-size:12pt">
+  const th=COLS.map(c=>`<th style="border:1px solid #000;padding:4px;font-size:9.5pt;font-weight:bold;text-align:center;background:#f5f5f5">${c[1]}</th>`).join('');
+  const trs=q.rows.map(r=>`<tr>${COLS.map(c=>`<td style="border:1px solid #000;padding:4px 5px;font-size:8.8pt;vertical-align:top;white-space:pre-wrap;${(c[0]==='lic')?'text-align:center;':''}">${esc(r[c[0]]||'')}</td>`).join('')}</tr>`).join('');
+  return `<div style="font-family:'Times New Roman',Times,serif;color:#000;background:#fff;padding:24px">
+    <table style="border-collapse:collapse;margin-left:auto;margin-bottom:6px"><tr><td style="border:1px solid #000;padding:4px 8px;font-size:10pt">Visto&nbsp;&nbsp;O(A) DAP: ________________________&nbsp;&nbsp;_____/_____/_______</td></tr></table>
+    <div style="text-align:center;line-height:1.3;font-size:12.5pt">
       <div>REPÚBLICA DE MOÇAMBIQUE</div>
       <div>GOVERNO DO DISTRITO DE ${esc((q.distrito||'____________________').toUpperCase())}</div>
       <div>SERVIÇO DISTRITAL DE EDUCAÇÃO, JUVENTUDE E TECNOLOGIA</div>
       <div>Escola Pré-Universitária Sagrada Família – Maxixe</div>
-      <div style="margin-top:4px">Plano quinzenal da Disciplina de ${esc(q.disc)} – ${esc(cls.classe||'')} Classe</div>
+      <div style="margin-top:4px;font-weight:bold;font-size:13.5pt">Plano quinzenal da Disciplina de ${esc(q.disc)} – ${esc(cls.classe||'')} Classe</div>
     </div>
     <div style="text-align:center;font-weight:bold;font-size:12pt;margin:8px 0 10px">Período: ${esc(q.periodoIni||'____/____/2026')} a ${esc(q.periodoFim||'____/____/2026')}</div>
     <table style="border-collapse:collapse;width:100%;table-layout:fixed"><colgroup>
       <col style="width:12%"><col style="width:9%"><col style="width:6%"><col style="width:17%"><col style="width:16%"><col style="width:16%"><col style="width:12%"><col style="width:12%">
     </colgroup><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>
-    <table style="border-collapse:collapse;width:100%;margin-top:14px;font-size:11pt"><tr>
+    <table style="border-collapse:collapse;width:100%;margin-top:16px;font-size:11pt"><tr>
       <td style="vertical-align:top;padding:4px 8px;width:60%">Elaborado por ${q.elaboradoPor?esc(q.elaboradoPor):'____________________________________'}<br><br>_____________________________________&nbsp;&nbsp;&nbsp;_____________________________________</td>
       <td style="vertical-align:top;padding:4px 8px">O Delegado de Disciplina<br><br>${q.delegado?esc(q.delegado):'_______________________________'}</td>
     </tr></table>
   </div>`;
-  let pr=$('#printRoot'); if(!pr){pr=document.createElement('div');pr.id='printRoot';document.body.appendChild(pr);}
-  pr.innerHTML=html; setPrintOrient(false);
-  document.body.classList.add('printing');
-  const done=()=>{document.body.classList.remove('printing');pr.innerHTML='';window.removeEventListener('afterprint',done);};
-  window.addEventListener('afterprint',done);
-  setTimeout(()=>window.print(),90);
+}
+
+async function quinzPrint(id){
+  const q=quinzById(id); if(!q)return;
+  toast('A gerar documento PDF…');
+  let stage=$('#exportStage');
+  if(!stage){ stage=document.createElement('div'); stage.id='exportStage'; document.body.appendChild(stage); }
+  stage.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;visibility:hidden;pointer-events:none';
+  stage.innerHTML=`<div id="quinzPdfDoc" style="width:1240px;background:#ffffff;color:#000000;box-sizing:border-box">${buildQuinzHtml(q)}</div>`;
+
+  try {
+    const el = stage.firstElementChild;
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1240 });
+    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const M = 6, aw = pw - M*2, ah = ph - M*2;
+    let w = aw, h = canvas.height * (aw / canvas.width);
+    if(h > ah){ h = ah; w = canvas.width * (ah / canvas.height); }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w)/2, M, w, h);
+
+    const safeDisc = (q.disc||'Plano').replace(/[\/\\:*?"<>|]/g, '_');
+    const fileName = `Plano_Quinzenal_${safeDisc}.pdf`;
+
+    const pdfBlob = pdf.output('blob');
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+          text: `Plano Quinzenal - ${q.disc}`
+        });
+        toast('PDF gerado e partilhado ✓');
+        stage.innerHTML = '';
+        return;
+      } catch(shareErr){}
+    }
+
+    pdf.save(fileName);
+    toast('PDF descarregado com sucesso ✓');
+  } catch(err){
+    console.error('Erro ao gerar PDF:', err);
+    toast('Erro ao gerar PDF', true);
+  } finally {
+    stage.innerHTML = '';
+  }
 }
 function plTkOf(q){ // recupera a chave de turma a partir do registo
   for(const k in (DB.planos||{})){ if((DB.planos[k].quinzenais||[]).some(x=>x.id===q.id)){ const parts=k.split('::'); return parts[1]; } }
