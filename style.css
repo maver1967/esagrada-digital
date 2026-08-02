@@ -368,13 +368,49 @@ table.hd-grid tr.brk td{background:#fbfbfc;text-align:center;font-size:7.5px;fon
 }
 #printRoot{display:none}
 @media print{
-  @page{size:A4 landscape;margin:6mm}
+  @page{size:A4 landscape;margin:4mm 6mm 4mm 6mm}
+  html, body{height:100%!important;margin:0!important;padding:0!important;background:#fff!important;overflow:hidden!important}
   body.printing{background:#fff!important;background-image:none!important}
   body.printing>*:not(#printRoot){display:none!important}
-  #printRoot{display:block!important}
-  #printRoot .hdoc{width:100%!important;box-shadow:none!important;padding:0!important;margin:0!important}
-  #printRoot table.hd-grid{width:100%!important}
-  #printRoot table.hd-grid td,#printRoot table.hd-grid th{padding-top:6px!important;padding-bottom:6px!important}
+  #printRoot{display:block!important;width:100%!important;height:100%!important;padding:0!important;margin:0!important}
+  #printRoot .hdoc{width:100%!important;box-shadow:none!important;border:none!important;border-top:none!important;padding:0!important;margin:0!important;font-size:8pt!important;page-break-inside:avoid!important;break-inside:avoid!important}
+  #printRoot .hd-top{padding-bottom:3px!important;gap:12px!important}
+  #printRoot .hd-brand .lg{width:40px!important;height:40px!important}
+  #printRoot .hd-brand .lg img{width:40px!important;height:40px!important}
+  #printRoot .hd-brand .t1{font-size:7.5px!important}
+  #printRoot .hd-brand .t2{font-size:14px!important;line-height:1.05!important}
+  #printRoot .hd-brand .t3{font-size:8px!important}
+  #printRoot .hd-addr{font-size:7.5px!important;line-height:1.25!important}
+  #printRoot .hd-visto{padding:2px 8px!important;min-width:110px!important}
+  #printRoot .hd-visto .v{font-size:7.5px!important}
+  #printRoot .hd-visto .sig{height:14px!important;margin:1px 2px 2px!important}
+  #printRoot .hd-visto .r{font-size:8px!important}
+  #printRoot .hd-titlebar{padding:3px 8px!important;margin-bottom:3px!important}
+  #printRoot .hd-titlebar .a{font-size:11.5px!important}
+  #printRoot .hd-titlebar .b{font-size:8px!important}
+  #printRoot .hd-badge{padding:2px 8px!important;border-radius:5px!important}
+  #printRoot .hd-badge .x{font-size:12px!important}
+  #printRoot .hd-badge .y{font-size:7px!important}
+  #printRoot .hd-hino{padding:1.5px 4px!important;margin-bottom:3px!important;font-size:8px!important}
+  #printRoot .hd-info{font-size:8px!important;padding:1px 0!important;margin-bottom:2px!important;gap:10px!important}
+  #printRoot .hd-legend{font-size:7.5px!important;padding:1px 0 3px!important;gap:8px!important}
+  #printRoot .hd-sect{font-size:8px!important;padding:2px 6px!important;border-radius:4px 4px 0 0!important}
+  #printRoot table.hd-grid{width:100%!important;table-layout:fixed!important}
+  #printRoot table.hd-grid thead th{font-size:7.5px!important;padding:2px 2px!important}
+  #printRoot table.hd-grid thead th:first-child{width:54px!important}
+  #printRoot table.hd-grid td, #printRoot table.hd-grid th{padding:1.5px 3px!important;border-color:#ccc!important}
+  #printRoot table.hd-grid td.tm{font-size:7px!important;padding:1.5px 1px!important;line-height:1.1!important}
+  #printRoot table.hd-grid td.lesson{padding:1.5px 3px!important}
+  #printRoot table.hd-grid tr.brk td{font-size:6.5px!important;padding:1px!important}
+  #printRoot .hd-ent{font-size:9px!important;padding:0!important;line-height:1.1!important}
+  #printRoot .hd-ent .gp{font-size:7px!important;padding:0 2px!important}
+  #printRoot .hd-ent .bar{min-height:10px!important;width:2.5px!important}
+  #printRoot .hd-almoco{padding:2px 4px!important;margin:3px 0!important;font-size:8px!important}
+  #printRoot .hd-saida{padding:2px 4px!important;margin-top:3px!important;font-size:8px!important}
+  #printRoot .hd-foot{margin-top:3px!important;padding-top:2px!important;font-size:7px!important}
+  #printRoot .hd-signs{margin-top:6px!important}
+  #printRoot .hd-sign .v{font-size:7.5px!important;margin-bottom:8px!important}
+  #printRoot .hd-sign .ln{width:170px!important;padding-top:1px!important;font-size:8px!important}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
 
