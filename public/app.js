@@ -477,7 +477,29 @@ function selectTeacherModal(selectedId, onSelect) {
 }
 
 function selectClassModal(selectedId, onSelect) {
-  const items = DB.classes.map(c => {
+  let classes = DB.classes;
+  const isTeacherRole = (typeof PREVIEW_ROLE !== 'undefined' && (PREVIEW_ROLE === 'professor' || PREVIEW_ROLE === 'diretor')) ||
+    (typeof AUTH_USER !== 'undefined' && AUTH_USER && (AUTH_USER.role === 'professor' || AUTH_USER.role === 'diretor'));
+
+  if (isTeacherRole) {
+    const tid = typeof currentTeacherId === 'function' ? currentTeacherId() : '';
+    if (tid) {
+      const myTks = typeof getTeacherTurmaKeys === 'function' ? getTeacherTurmaKeys(tid) : [];
+      if (myTks && myTks.length > 0) {
+        const filtered = classes.filter(c => {
+          const cNameL = String(c.name).toLowerCase();
+          const cIdL = String(c.id).toLowerCase();
+          return myTks.some(tk => {
+            const tkL = String(tk).toLowerCase();
+            return tkL === cIdL || tkL === cNameL || cNameL.includes(tkL) || tkL.includes(cNameL);
+          });
+        });
+        if (filtered.length > 0) classes = filtered;
+      }
+    }
+  }
+
+  const items = classes.map(c => {
     const bg = c.type === 'mista' ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#3b82f6,#2563eb)';
     return {
       value: c.id,
@@ -488,7 +510,7 @@ function selectClassModal(selectedId, onSelect) {
   });
   openPickerModal({
     title: 'Selecione a Turma',
-    subtitle: `${DB.classes.length} turmas ativas`,
+    subtitle: `${classes.length} turma(s) disponível(is)`,
     items,
     selectedValue: selectedId,
     onSelect
@@ -780,9 +802,48 @@ function getTeacherTurmaKeys(tid){
   const allTks = typeof turmaKeys === 'function' ? turmaKeys() : Object.keys((typeof NOTAS !== 'undefined' && NOTAS.turmas) ? NOTAS.turmas : {});
   const matched = new Set();
 
+  const tObj = typeof getTeacher === 'function' ? getTeacher(tid) : null;
+  const tName = tObj ? (tObj.name || tObj.nome || '').trim().toLowerCase() : '';
+  const tLabel = tObj && typeof teacherLabel === 'function' ? teacherLabel(tObj).trim().toLowerCase() : '';
+
+  // 1. Check DT (Director de Turma)
+  const dts = (DB && DB.diretoresTurma) || {};
+  Object.entries(dts).forEach(([tk, val]) => {
+    const valL = String(val||'').trim().toLowerCase();
+    if (valL && (valL === String(tid).toLowerCase() || valL === tName || valL === tLabel)) {
+      matched.add(tk);
+    }
+  });
+
+  // 2. Check TURMA_PROFS
+  if (typeof TURMA_PROFS !== 'undefined') {
+    Object.entries(TURMA_PROFS).forEach(([tk, discs]) => {
+      Object.values(discs).forEach(pName => {
+        const pL = String(pName||'').trim().toLowerCase();
+        if (pL && (pL === tName || pL === tLabel || (tName && pL.includes(tName)) || (tLabel && pL.includes(tLabel)))) {
+          matched.add(tk);
+        }
+      });
+    });
+  }
+
+  // 3. Check NOTAS.profs
+  if (typeof NOTAS !== 'undefined' && NOTAS.profs) {
+    Object.entries(NOTAS.profs).forEach(([disc, pName]) => {
+      const pL = String(pName||'').trim().toLowerCase();
+      if (pL && (pL === tName || pL === tLabel || (tName && (pL.includes(tName) || tName.includes(pL))) || (tLabel && (pL.includes(tLabel) || tLabel.includes(pL))))) {
+        allTks.forEach(tk => {
+          if (NOTAS.turmas[tk] && NOTAS.turmas[tk].discs && NOTAS.turmas[tk].discs.includes(disc)) {
+            matched.add(tk);
+          }
+        });
+      }
+    });
+  }
+
+  // 4. Check DB.assignments & schedule
   const st = typeof teacherStats === 'function' ? teacherStats(tid) : null;
   const clsNames = (st && Array.isArray(st.classes)) ? [...st.classes] : [];
-
   const asgs = (DB && Array.isArray(DB.assignments)) ? DB.assignments.filter(a => a.tid === tid) : [];
   const asgCids = asgs.map(a => a.cid);
 
@@ -827,6 +888,87 @@ function getTeacherTurmaKeys(tid){
   });
 
   return [...matched].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+}
+
+function userTurmaKeys(){
+  const all = turmaKeys();
+  if (typeof PREVIEW_ROLE !== 'undefined' && PREVIEW_ROLE === 'professor') {
+    const tid = currentTeacherId();
+    if (tid) {
+      const myTks = getTeacherTurmaKeys(tid);
+      if (myTks && myTks.length > 0) return myTks;
+    }
+  }
+  return all;
+}
+
+function getTeacherDiscsForTurma(tid, tk){
+  if (!tk) return [];
+  const t = (NOTAS && NOTAS.turmas) ? NOTAS.turmas[tk] : null;
+  if (!t) return [];
+
+  if (typeof PREVIEW_ROLE !== 'undefined' && PREVIEW_ROLE !== 'professor' && PREVIEW_ROLE !== 'diretor') {
+    return t.discs || [];
+  }
+
+  const dts = (DB && DB.diretoresTurma) || {};
+  const tObj = typeof getTeacher === 'function' ? getTeacher(tid) : null;
+  const tName = tObj ? (tObj.name || tObj.nome || '').trim().toLowerCase() : '';
+  const tLabel = tObj && typeof teacherLabel === 'function' ? teacherLabel(tObj).trim().toLowerCase() : '';
+  const dtVal = String(dts[tk]||'').trim().toLowerCase();
+  const isDt = PREVIEW_ROLE === 'diretor' || (dtVal && (dtVal === String(tid).toLowerCase() || dtVal === tName || dtVal === tLabel));
+  if (isDt) {
+    return t.discs || [];
+  }
+
+  const discs = new Set();
+
+  if (typeof TURMA_PROFS !== 'undefined' && TURMA_PROFS[tk]) {
+    Object.entries(TURMA_PROFS[tk]).forEach(([disc, pName]) => {
+      const pL = String(pName||'').trim().toLowerCase();
+      if (pL && (pL === tName || pL === tLabel || (tName && pL.includes(tName)) || (tLabel && pL.includes(tLabel)))) {
+        discs.add(disc);
+      }
+    });
+  }
+
+  if (typeof NOTAS !== 'undefined' && NOTAS.profs) {
+    Object.entries(NOTAS.profs).forEach(([disc, pName]) => {
+      const pL = String(pName||'').trim().toLowerCase();
+      if (pL && (pL === tName || pL === tLabel || (tName && (pL.includes(tName) || tName.includes(pL))) || (tLabel && (pL.includes(tLabel) || tLabel.includes(pL))))) {
+        if (t.discs && t.discs.includes(disc)) {
+          discs.add(disc);
+        }
+      }
+    });
+  }
+
+  const asgs = (DB && Array.isArray(DB.assignments)) ? DB.assignments.filter(a => a.tid === tid) : [];
+  asgs.forEach(a => {
+    const c = (DB && DB.classes) ? DB.classes.find(x => x.id === a.cid) : null;
+    const matchClass = a.cid === tk || (c && (c.name === tk || `${t.classe} T${t.turma}`.toLowerCase() === String(c.name).toLowerCase()));
+    if (matchClass && a.sid) {
+      const sj = typeof getSubj === 'function' ? getSubj(a.sid) : null;
+      if (sj && sj.name && t.discs.includes(sj.name)) discs.add(sj.name);
+    }
+  });
+
+  const clsObj = (DB && DB.classes) ? DB.classes.find(c => c.name === tk || c.id === tk || `${t.classe} T${t.turma}`.toLowerCase() === String(c.name).toLowerCase()) : null;
+  if (clsObj && DB.tt && DB.tt[clsObj.id]) {
+    (typeof DAYS !== 'undefined' ? DAYS : []).forEach(d => {
+      const dayGrid = DB.tt[clsObj.id][d] || {};
+      Object.values(dayGrid).forEach(arr => {
+        (arr || []).forEach(e => {
+          if (e.tid === tid && e.sid) {
+            const sj = typeof getSubj === 'function' ? getSubj(e.sid) : null;
+            if (sj && sj.name && t.discs.includes(sj.name)) discs.add(sj.name);
+          }
+        });
+      });
+    });
+  }
+
+  return discs.size > 0 ? (t.discs || []).filter(d => discs.has(d)) : (t.discs || []);
 }
 
 function diIsoToday(){ return new Date().toISOString().slice(0,10); }
@@ -2962,15 +3104,20 @@ function renderCellEntries(arr,confSet,classId,day,slotId){
   }).join('');
 }
 
+function canEditTT(){
+  return ['direcao', 'admin', 'secretaria'].includes(PREVIEW_ROLE);
+}
+
 VIEWS.grid=function(r){
   if(!UI.cls||!getClass(UI.cls)) UI.cls=DB.classes[0]?.id||null;
   setSub(UI.cls?'Turma '+getClass(UI.cls).name:'—');
-  if(!DB.classes.length){r.innerHTML=`<div class="vhead"><h1>Editor de Horários</h1></div>${hubTabs(['grid','tview','rules','export'],'grid')}<div class="card"><div class="empty">${I.classes}<div>Crie primeiro uma turma.</div></div></div>`;return;}
+  const canEdit = canEditTT();
+  if(!DB.classes.length){r.innerHTML=`<div class="vhead"><h1>${canEdit?'Editor de Horários':'Horários das Turmas'}</h1></div>${hubTabs(['grid','tview','rules','export'],'grid')}<div class="card"><div class="empty">${I.classes}<div>Crie primeiro uma turma.</div></div></div>`;return;}
   const cls=getClass(UI.cls);
   // conflicts set (teacher double-booked) — aulas combinadas excluídas
   const confSet=new Set(detectConflicts().filter(c=>!c.combined).map(c=>c.key));
 
-  r.innerHTML=`<div class="vhead"><h1>Editor de Horários</h1><p>Selecione a turma e clique em qualquer célula de tempo para gerir ou atribuir disciplinas.</p></div>
+  r.innerHTML=`<div class="vhead"><h1>${canEdit?'Editor de Horários':'Horários das Turmas'}</h1><p>${canEdit?'Selecione a turma e clique em qualquer célula de tempo para gerir ou atribuir disciplinas.':'Consulta de horários de todas as turmas da escola (Modo Leitura).'}</p></div>
   ${hubTabs(['grid','tview','rules','export'],'grid')}
   <div style="background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:16px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -2989,10 +3136,12 @@ VIEWS.grid=function(r){
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${canEdit ? `
       <button class="btn sm" id="copyFrom" style="border-radius:10px;font-weight:600">${I.copy} Copiar de…</button>
       <button class="btn sm" id="genTT" style="border-radius:10px;font-weight:600">${I.magic} Gerar IA</button>
       <button class="btn sm" id="archTT" style="border-radius:10px;font-weight:600">${I.archive} Arquivar</button>
       <button class="btn sm dng" id="clearTT" style="border-radius:10px;font-weight:600">${I.trash} Limpar</button>
+      ` : ''}
       <button class="btn sm em" onclick="UI.expTab='class';UI.expTarget='${cls.id}';go('export')" style="border-radius:10px;font-weight:700">${I.pdf} Exportar / Imprimir</button>
     </div>
   </div>
@@ -3009,12 +3158,17 @@ VIEWS.grid=function(r){
   html+=renderPeriodRows('afternoon',cls,confSet);
   html+=`<tr><td colspan="${DAYS.length+1}" class="saida-bar" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;font-weight:700;padding:8px">✅ Saída — ${s.saida}</td></tr>`;
   body.innerHTML=html;
-  body.querySelectorAll('td.cell').forEach(td=>td.onclick=()=>editCell(cls.id,td.dataset.d,td.dataset.s));
-  if($('#clsSel')) $('#clsSel').onchange=e=>{UI.cls=e.target.value;render();};
-  $('#clearTT').onclick=()=>confirmDel(`Limpar todo o horário da turma ${cls.name}?`,()=>{DAYS.forEach(d=>DB.tt[cls.id][d]={});upd(null,true);toast('Horário limpo');});
-  $('#genTT').onclick=()=>confirmAct(`Gerar automaticamente o horário da turma ${cls.name}? Os blocos não-fixos serão substituídos. (Defina as condições em "Geração automática".)`,'Gerar',()=>{doGenerate([cls.id],'Turma '+cls.name);});
-  $('#archTT').onclick=saveVersionDialog;
-  $('#copyFrom').onclick=()=>copyFromDialog(cls.id);
+
+  if (canEdit) {
+    body.querySelectorAll('td.cell').forEach(td=>td.onclick=()=>editCell(cls.id,td.dataset.d,td.dataset.s));
+    if($('#clsSel')) $('#clsSel').onchange=e=>{UI.cls=e.target.value;render();};
+    if($('#clearTT')) $('#clearTT').onclick=()=>confirmDel(`Limpar todo o horário da turma ${cls.name}?`,()=>{DAYS.forEach(d=>DB.tt[cls.id][d]={});upd(null,true);toast('Horário limpo');});
+    if($('#genTT')) $('#genTT').onclick=()=>confirmAct(`Gerar automaticamente o horário da turma ${cls.name}? Os blocos não-fixos serão substituídos. (Defina as condições em "Geração automática".)`,'Gerar',()=>{doGenerate([cls.id],'Turma '+cls.name);});
+    if($('#archTT')) $('#archTT').onclick=saveVersionDialog;
+    if($('#copyFrom')) $('#copyFrom').onclick=()=>copyFromDialog(cls.id);
+  } else {
+    body.querySelectorAll('td.cell').forEach(td=>td.style.cursor='default');
+  }
 };
 function renderPeriodRows(period,cls,confSet){
   const rows=periodRows(DB.grid[period]); let h='';
@@ -3029,6 +3183,7 @@ function renderPeriodRows(period,cls,confSet){
   return h;
 }
 function copyFromDialog(cid){
+  if(!canEditTT()){ toast('Sem permissão para copiar horários.',1); return; }
   const others=DB.classes.filter(c=>c.id!==cid);
   if(!others.length)return toast('Não há outra turma',1);
   openModal(`<div class="modal-h"><h3>Copiar horário</h3><button class="xbtn" onclick="closeModal()">${I.x}</button></div>
@@ -3039,6 +3194,7 @@ function copyFromDialog(cid){
 }
 /* ----- CELL EDITOR ----- */
 function editCell(cid,day,sid){
+  if(!canEditTT()){ toast('Sem permissão para editar o horário.',1); return; }
   const cls=getClass(cid); const sl=allSlots().find(x=>x.id===sid);
   DB.tt[cid][day]=DB.tt[cid][day]||{}; DB.tt[cid][day][sid]=DB.tt[cid][day][sid]||[];
   const asgs=DB.assignments.filter(a=>a.cid===cid);
@@ -3303,8 +3459,9 @@ function exportPrint(){
   if(!UI.expTarget){toast('Nada selecionado',true);return;}
   let pr=$('#printRoot'); if(!pr){ pr=document.createElement('div'); pr.id='printRoot'; document.body.appendChild(pr); }
   pr.innerHTML=buildHdoc(UI.expTab,UI.expTarget);
+  setPrintOrient(false);
   document.body.classList.add('printing');
-  const done=()=>{ document.body.classList.remove('printing'); pr.innerHTML=''; window.removeEventListener('afterprint',done); };
+  const done=()=>{ document.body.classList.remove('printing'); pr.innerHTML=''; setPrintOrient(false); window.removeEventListener('afterprint',done); };
   window.addEventListener('afterprint',done);
   setTimeout(()=>{ window.print(); }, 80);
 }
@@ -4204,6 +4361,7 @@ function confirmAct(msg,yesLabel,onYes){
   $('#ca').onclick=()=>{ onYes(); closeModal(); };
 }
 function doGenerate(cids,label){
+  if(!canEditTT()){ toast('Sem permissão para gerar horários.',1); return; }
   const res=runGeneration(cids);
   if(res.empty){ toast('Sem atribuições para gerar. Defina disciplinas/horas em "Atribuições".',true); return; }
   persist();
@@ -4218,6 +4376,13 @@ function doGenerate(cids,label){
    VISTA — GERAÇÃO AUTOMÁTICA
    ============================================================ */
 VIEWS.rules=function(r){
+  if(!canEditTT()){
+    setSub('Regras de Horários');
+    r.innerHTML=`<div class="vhead"><h1>Regras de composição</h1></div>
+    ${hubTabs(['grid','tview','rules','export'],'rules')}
+    <div class="card"><div class="empty">${I.lock||''}<div>Apenas a Direção pode alterar as regras de composição e gerar horários.</div></div></div>`;
+    return;
+  }
   setSub('Regras · condições · gerar');
   const g=DB.rules.global;
   const subsByCat={}; DB.cats.forEach(c=>subsByCat[c.id]=[]);
@@ -4591,14 +4756,20 @@ VIEWS.pautas = function(r){
   if(!NUI.pautaTri) NUI.pautaTri = 't1';
   const triNome = NUI.pautaTri==='t1'?'I':NUI.pautaTri==='t2'?'II':'III';
   setSub(`Médias do ${triNome} Trimestre`);
+  const tks = userTurmaKeys();
+  if(!tks.includes(NUI.turma)) NUI.turma = tks[0] || turmaKeys()[0];
   const tk = NUI.turma, t = getTurmaVirtual(tk, NUI.pautaTri), s = nTurmaStats(t);
   const codes = Object.keys(t.roster);
-  const tabs = turmaKeys().map(k=>`<button class="btn sm ${tk===k?'pri':'em'}" style="${tk!==k?'background:var(--bg-body);color:var(--txt);border-color:var(--line)':''}" onclick="NUI.turma='${k}';render()">${NOTAS.turmas[k].classe} T${NOTAS.turmas[k].turma}</button>`).join('');
+  const tabs = tks.map(k=>`<button class="btn sm ${tk===k?'pri':'em'}" style="${tk!==k?'background:var(--bg-body);color:var(--txt);border-color:var(--line)':''}" onclick="NUI.turma='${k}';render()">${NOTAS.turmas[k].classe} T${NOTAS.turmas[k].turma}</button>`).join('');
   const triTabs = [['t1','I Trimestre'],['t2','II Trimestre'],['t3','III Trimestre']].map(([id, nome])=>`<button class="btn sm ${NUI.pautaTri===id?'pri':'em'}" style="${NUI.pautaTri!==id?'background:var(--bg-body);color:var(--txt);border-color:var(--line)':''}" onclick="NUI.pautaTri='${id}';render()">${nome}</button>`).join('');
   const isMista = tk!=="10-2";
+
+  const isProfRole = PREVIEW_ROLE === 'professor';
+  const activeDiscs = isProfRole ? getTeacherDiscsForTurma(currentTeacherId(), tk) : t.discs;
+
   const rows = codes.map((cod,i)=>{
     const a=t.roster[cod], st=nStudentStats(t,cod);
-    const tds = t.discs.map(d=>{ const v=t.notas[d]&&t.notas[d][cod]; const neg=nIsNum(v)&&v<10;
+    const tds = activeDiscs.map(d=>{ const v=t.notas[d]&&t.notas[d][cod]; const neg=nIsNum(v)&&v<10;
       return `<td style="text-align:center;${neg?'color:#b3261e;font-weight:800;background:#f7e7e5':''}">${nFmt(v)}</td>`; }).join('');
     const secTd = isMista?`<td style="text-align:center"><span style="font-size:10px;font-weight:800;color:${SECFG[t.sec[cod]]};background:${SECBG[t.sec[cod]]};padding:1px 6px;border-radius:5px">${t.sec[cod]}</span></td>`:'';
     return `<tr class="np-row" style="cursor:pointer;background:${i%2?'#fbf8f1':'#fff'}" onclick="openAluno('${tk}','${cod}')">
@@ -4607,9 +4778,15 @@ VIEWS.pautas = function(r){
       <td style="text-align:center;font-weight:800;color:#26324a;background:#faf6ec">${st.med??''}</td>
       <td style="text-align:center;${st.neg?'color:#b3261e;font-weight:800':'color:#999'}">${st.neg}</td></tr>`;
   }).join('');
+
+  const filterNotice = (isProfRole && activeDiscs.length < t.discs.length)
+    ? `<div style="margin-bottom:12px;font-size:12px;color:var(--brand-blue,#3b82f6);background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);padding:8px 14px;border-radius:8px;display:flex;align-items:center;gap:8px">🔒 <b>Visão Docente Filtrada:</b> A visualizar apenas as turmas e disciplina(s) atribuídas (${activeDiscs.join(', ')}).</div>`
+    : '';
+
   r.innerHTML = `
-  <div class="vhead"><h1>Pautas das Turmas</h1><p style="min-height:2.9em">Médias do ${triNome} Trimestre · ${esc(t.tipo)}. Clique numa linha per abrir a ficha do aluno.</p></div>
+  <div class="vhead"><h1>Pautas das Turmas</h1><p style="min-height:2.9em">Médias do ${triNome} Trimestre · ${esc(t.tipo)}. Clique numa linha para abrir a ficha do aluno.</p></div>
   ${hubTabsGrouped([['test'],['cadernetas','pautas','alunos'],['docs']],'pautas')}
+  ${filterNotice}
   <div style="background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,0.02)">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="font-size:11px;font-weight:800;color:var(--txt-dim);text-transform:uppercase;letter-spacing:0.8px;width:80px">Turma</div>
@@ -4633,7 +4810,7 @@ VIEWS.pautas = function(r){
       <thead><tr style="background:#26324a;color:#fff">
         <th style="padding:9px 4px">Nº</th><th style="padding:9px 8px;text-align:left">Nome</th><th style="padding:9px 4px">Sx</th>
         ${isMista?'<th style="padding:9px 4px">Sec</th>':''}
-        ${t.discs.map(d=>`<th style="padding:9px 3px" title="${esc(d)}">${nAbbr(d)}</th>`).join('')}
+        ${activeDiscs.map(d=>`<th style="padding:9px 3px" title="${esc(d)}">${nAbbr(d)}</th>`).join('')}
         <th style="padding:9px 4px;background:#b8902a">Méd</th><th style="padding:9px 4px">Neg</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
   <p style="font-size:11.5px;color:#888;margin-top:10px">Células vazias = aluno não frequenta a disciplina (secção). D = dispensado.</p>`;
@@ -4673,7 +4850,8 @@ function alunoPautaView(r){
 VIEWS.alunos = function(r){
   if(PREVIEW_ROLE==='aluno'||PREVIEW_ROLE==='encarregado') return alunoPautaView(r);
   setSub("Directório de alunos");
-  const all=[]; turmaKeys().map(k=>[k,NOTAS.turmas[k]]).forEach(([tk,t])=>Object.keys(t.roster).forEach(cod=>all.push({tk,cod,...t.roster[cod],sec:t.sec[cod],classe:`${t.classe} T${t.turma}`})));
+  const tks = userTurmaKeys();
+  const all=[]; tks.map(k=>[k,NOTAS.turmas[k]]).forEach(([tk,t])=>Object.keys(t.roster).forEach(cod=>all.push({tk,cod,...t.roster[cod],sec:t.sec[cod],classe:`${t.classe} T${t.turma}`})));
   all.sort((a,b)=>a.nome.localeCompare(b.nome));
   const q=NUI.q.trim().toLowerCase();
   const tf=NUI.turmaFilter||'';
@@ -4699,7 +4877,7 @@ VIEWS.alunos = function(r){
         </div>
       </div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="btn sm ${!tf?'pri':''}" onclick="NUI.turmaFilter='';render()">Todas</button>${turmaKeys().map(k=>`<button class="btn sm ${tf===k?'pri':''}" onclick="NUI.turmaFilter='${k}';render()">${esc(k)}</button>`).join('')}
+        <button class="btn sm ${!tf?'pri':''}" onclick="NUI.turmaFilter='';render()">Todas</button>${tks.map(k=>`<button class="btn sm ${tf===k?'pri':''}" onclick="NUI.turmaFilter='${k}';render()">${esc(k)}</button>`).join('')}
       </div>
     </div>
   </div>
@@ -7308,7 +7486,21 @@ function ensureTestes(){ if(!DB.testes) DB.testes=[]; return DB.testes; }
 const TEUI = { tk:'all', tri:'all', tipo:'all' };
 function triNome(id){ const T=ensureTrimestres(); const t=T.lista.find(x=>x.id===id); return t?t.nome:id; }
 function turmaNome(tk){ const t=NOTAS.turmas[tk]; return t?`${t.classe} · Turma ${t.turma}`:tk; }
-function discOpts(tk,sel){ const t=NOTAS.turmas[tk]; const ds=t?t.discs:[]; return ds.map(d=>`<option ${d===sel?'selected':''}>${esc(d)}</option>`).join(''); }
+function discOpts(tk,sel){
+  const t = (NOTAS && NOTAS.turmas) ? NOTAS.turmas[tk] : null;
+  let ds = t ? t.discs : [];
+  const isProfRole = (typeof PREVIEW_ROLE !== 'undefined' && (PREVIEW_ROLE === 'professor' || PREVIEW_ROLE === 'diretor')) ||
+    (typeof AUTH_USER !== 'undefined' && AUTH_USER && (AUTH_USER.role === 'professor' || AUTH_USER.role === 'diretor'));
+
+  if (isProfRole && typeof getTeacherDiscsForTurma === 'function') {
+    const tid = typeof currentTeacherId === 'function' ? currentTeacherId() : '';
+    const myDiscs = getTeacherDiscsForTurma(tid, tk);
+    if (myDiscs && myDiscs.length > 0) {
+      ds = myDiscs;
+    }
+  }
+  return ds.map(d => `<option value="${esc(d)}" ${d === sel ? 'selected' : ''}>${esc(d)}</option>`).join('');
+}
 function testeLabel(x){ return x.tipo==='AT' ? 'AT' : ('ACS'+(x.num?(' '+x.num):'')); }
 
 VIEWS.test = function(r){
@@ -8747,52 +8939,15 @@ function buildPdHtml(d){
   </div>`;
 }
 
-async function pdPrint(id){
+function pdPrint(id){
   const d=pdById(id); if(!d)return;
-  toast('A gerar documento PDF…');
-  let stage=$('#exportStage');
-  if(!stage){ stage=document.createElement('div'); stage.id='exportStage'; document.body.appendChild(stage); }
-  stage.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;visibility:hidden;pointer-events:none';
-  stage.innerHTML=`<div id="pdPdfDoc" style="width:1180px;background:#ffffff;color:#000000;box-sizing:border-box">${buildPdHtml(d)}</div>`;
-
-  try {
-    const el = stage.firstElementChild;
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1180 });
-    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    const M = 6, aw = pw - M*2, ah = ph - M*2;
-    let w = aw, h = canvas.height * (aw / canvas.width);
-    if(h > ah){ h = ah; w = canvas.width * (ah / canvas.height); }
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w)/2, M, w, h);
-
-    const safeDisc = (d.disc||'Plano').replace(/[\/\\:*?"<>|]/g, '_');
-    const safeTurma = (d.turma||'Turma').replace(/[\/\\:*?"<>|]/g, '_');
-    const fileName = `Plano_de_Aula_Licao_${d.licao||'X'}_${safeDisc}_${safeTurma}.pdf`;
-
-    const pdfBlob = pdf.output('blob');
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
-      try {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-          text: `Plano de Aula - Lição ${d.licao} (${d.disc})`
-        });
-        toast('PDF gerado e partilhado ✓');
-        stage.innerHTML = '';
-        return;
-      } catch(shareErr){}
-    }
-
-    pdf.save(fileName);
-    toast('PDF descarregado com sucesso ✓');
-  } catch(err){
-    console.error('Erro ao gerar PDF:', err);
-    toast('Erro ao gerar PDF', true);
-  } finally {
-    stage.innerHTML = '';
-  }
+  const html = buildPdHtml(d);
+  let pr=$('#printRoot'); if(!pr){pr=document.createElement('div');pr.id='printRoot';document.body.appendChild(pr);}
+  pr.innerHTML=html; setPrintOrient(false);
+  document.body.classList.add('printing');
+  const done=()=>{document.body.classList.remove('printing');pr.innerHTML='';setPrintOrient(false);window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  setTimeout(()=>window.print(),90);
 }
 
 
@@ -8997,51 +9152,15 @@ function buildQuinzHtml(q){
   </div>`;
 }
 
-async function quinzPrint(id){
+function quinzPrint(id){
   const q=quinzById(id); if(!q)return;
-  toast('A gerar documento PDF…');
-  let stage=$('#exportStage');
-  if(!stage){ stage=document.createElement('div'); stage.id='exportStage'; document.body.appendChild(stage); }
-  stage.style.cssText='position:fixed;left:0;top:0;z-index:99999;background:#fff;visibility:hidden;pointer-events:none';
-  stage.innerHTML=`<div id="quinzPdfDoc" style="width:1240px;background:#ffffff;color:#000000;box-sizing:border-box">${buildQuinzHtml(q)}</div>`;
-
-  try {
-    const el = stage.firstElementChild;
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 1240 });
-    const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    const M = 6, aw = pw - M*2, ah = ph - M*2;
-    let w = aw, h = canvas.height * (aw / canvas.width);
-    if(h > ah){ h = ah; w = canvas.width * (ah / canvas.height); }
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w)/2, M, w, h);
-
-    const safeDisc = (q.disc||'Plano').replace(/[\/\\:*?"<>|]/g, '_');
-    const fileName = `Plano_Quinzenal_${safeDisc}.pdf`;
-
-    const pdfBlob = pdf.output('blob');
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
-      try {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-          text: `Plano Quinzenal - ${q.disc}`
-        });
-        toast('PDF gerado e partilhado ✓');
-        stage.innerHTML = '';
-        return;
-      } catch(shareErr){}
-    }
-
-    pdf.save(fileName);
-    toast('PDF descarregado com sucesso ✓');
-  } catch(err){
-    console.error('Erro ao gerar PDF:', err);
-    toast('Erro ao gerar PDF', true);
-  } finally {
-    stage.innerHTML = '';
-  }
+  const html = buildQuinzHtml(q);
+  let pr=$('#printRoot'); if(!pr){pr=document.createElement('div');pr.id='printRoot';document.body.appendChild(pr);}
+  pr.innerHTML=html; setPrintOrient(false);
+  document.body.classList.add('printing');
+  const done=()=>{document.body.classList.remove('printing');pr.innerHTML='';setPrintOrient(false);window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  setTimeout(()=>window.print(),90);
 }
 function plTkOf(q){ // recupera a chave de turma a partir do registo
   for(const k in (DB.planos||{})){ if((DB.planos[k].quinzenais||[]).some(x=>x.id===q.id)){ const parts=k.split('::'); return parts[1]; } }
@@ -9755,7 +9874,7 @@ VIEWS.diario=function(r){
     DIUI.sel = best;
   }
 
-  let head=`<div class="vhead"><h1>Diário de Aula</h1><p style="min-height:2.9em">Registe presenças, sumário e anotações da aula actual.</p></div>` + navTabs + `
+  let head=`<div class="vhead"><h1>Diário de Aula</h1><p>Registe presenças, sumário e anotações da aula actual.</p></div>` + navTabs + `
     <div style="background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,0.02)">
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="font-size:11px;font-weight:800;color:var(--txt-dim);text-transform:uppercase;letter-spacing:0.8px;width:80px">Professor</div>
@@ -9793,7 +9912,7 @@ VIEWS.diario=function(r){
         <button class="btn pri" onclick="diSetData(diIsoToday())">📅 Ir para Hoje (${diFmtData(diIsoToday())})</button>
         ${dtBtn}
       </div>
-    </div>` + renderProximasHtml(tid);
+    </div>`;
     return;
   }
 
