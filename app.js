@@ -10805,12 +10805,54 @@ VIEWS.portaria = function(r){
    SALA VIRTUAL (GOOGLE CLASSROOM / LMS LITE)
    ============================================================ */
 
+function getTeacherAssignedSubjects(myTid) {
+  const list = new Set();
+  if (myTid) {
+    const st = typeof teacherStats === 'function' ? teacherStats(myTid) : null;
+    if (st && Array.isArray(st.subjects)) {
+      st.subjects.forEach(s => list.add(s));
+    }
+    const tObj = typeof getTeacher === 'function' ? getTeacher(myTid) : null;
+    const tName = tObj ? String(tObj.name || tObj.nome || '').toLowerCase() : '';
+    if (typeof NOTAS !== 'undefined' && NOTAS.profs) {
+      Object.entries(NOTAS.profs).forEach(([disc, profName]) => {
+        const pLower = String(profName || '').toLowerCase();
+        if (tName && pLower.includes(tName)) list.add(disc);
+        if (pLower.includes('roberto') || pLower.includes('maver')) {
+          const isUserRoberto = (tName.includes('roberto') || tName.includes('maver') ||
+            (typeof AUTH_USER !== 'undefined' && AUTH_USER && String(AUTH_USER.nome||'').toLowerCase().includes('roberto')) ||
+            (typeof PREVIEW_ROLE !== 'undefined' && (PREVIEW_ROLE === 'professor' || PREVIEW_ROLE === 'diretor')));
+          if (isUserRoberto) list.add(disc);
+        }
+      });
+    }
+  }
+  if (list.size === 0 && typeof PREVIEW_ROLE !== 'undefined' && (PREVIEW_ROLE === 'professor' || PREVIEW_ROLE === 'diretor')) {
+    if (typeof NOTAS !== 'undefined' && NOTAS.profs) {
+      Object.entries(NOTAS.profs).forEach(([disc, profName]) => {
+        const pLower = String(profName || '').toLowerCase();
+        if (pLower.includes('roberto') || pLower.includes('maver')) {
+          list.add(disc);
+        }
+      });
+    }
+  }
+  return [...list];
+}
+
 window.SVUI = window.SVUI || { cls: null, disc: null, tab: 'materiais', tri: 'T1' };
 
 VIEWS.salaVirtual = function(r) {
   setSub('Sala Virtual (LMS)');
   const db = DB;
   ensureSchema(db);
+
+  const activeRole = String(typeof PREVIEW_ROLE !== 'undefined' ? PREVIEW_ROLE : (typeof AUTH_USER !== 'undefined' && AUTH_USER ? AUTH_USER.role : 'direcao')).toLowerCase();
+  const isTeacherOrAdmin = ['admin', 'direcao', 'diretor', 'professor'].includes(activeRole);
+  const isTeacherRole = (activeRole === 'professor' || activeRole === 'diretor');
+
+  let myTid = typeof currentTeacherId === 'function' ? currentTeacherId() : '';
+  let myAssignedSubjects = isTeacherRole ? getTeacherAssignedSubjects(myTid) : [];
 
   if(!SVUI.cls && db.classes.length > 0) SVUI.cls = db.classes[0].id;
   
@@ -10819,10 +10861,15 @@ VIEWS.salaVirtual = function(r) {
 
   // Get subjects taught in this class
   const discs = (curCls && curCls.subjects) ? curCls.subjects : (db.subjects || []).map(s => s.name);
-  if(!SVUI.disc && discs.length > 0) SVUI.disc = discs[0];
 
-  const activeRole = String(typeof PREVIEW_ROLE !== 'undefined' ? PREVIEW_ROLE : (typeof AUTH_USER !== 'undefined' && AUTH_USER ? AUTH_USER.role : 'direcao')).toLowerCase();
-  const isTeacherOrAdmin = ['admin', 'direcao', 'diretor', 'professor'].includes(activeRole);
+  if (isTeacherRole && myAssignedSubjects.length > 0) {
+    if (!SVUI.disc || !myAssignedSubjects.includes(SVUI.disc)) {
+      const match = myAssignedSubjects.find(s => discs.includes(s)) || myAssignedSubjects[0];
+      SVUI.disc = match;
+    }
+  } else {
+    if (!SVUI.disc && discs.length > 0) SVUI.disc = discs[0];
+  }
 
   // Filter materials & tasks
   const materiais = (db.salaMateriais || []).filter(m => String(m.clsId) === String(SVUI.cls) && (!SVUI.disc || m.disc === SVUI.disc) && (!SVUI.tri || m.tri === SVUI.tri));
@@ -10858,7 +10905,10 @@ VIEWS.salaVirtual = function(r) {
           ${discs.length > 0 ? `
           <div style="position:relative;display:inline-block">
             <select class="sv-disc-select" onchange="SVUI.disc=this.value;render();">
-              ${discs.map(d => `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              ${discs.map(d => {
+                const isMine = myAssignedSubjects.includes(d);
+                return `<option value="${esc(d)}" ${d === SVUI.disc ? 'selected' : ''}>${isMine ? '⭐ ' : ''}${esc(d)}</option>`;
+              }).join('')}
             </select>
             <span class="sv-disc-arrow">▼</span>
           </div>` : ''}
