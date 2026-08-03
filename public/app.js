@@ -5084,7 +5084,7 @@ function cartaoHtml(cod){
       <div style="height:18px"></div>
       <div style="border-top:1px solid #b9c0cf;padding-top:3px;font-size:8px;color:#8a93a7">${esc((DB.settings&&DB.settings.directorName)||'O Director')}</div>
     </div>
-    <div style="position:absolute;z-index:2;bottom:9px;right:13px;background:#fff;border-radius:6px;line-height:0;padding:2px">${qrSvg('ESAGRADA:'+cod,{size:56,pad:1})}</div>
+    <div style="position:absolute;z-index:2;bottom:7px;right:10px;background:#fff;border-radius:6px;line-height:0;padding:2px;border:1px solid #e2e8f0;box-shadow:0 2px 5px rgba(0,0,0,0.05)">${qrSvg('ESAGRADA:'+cod,{size:74,pad:1})}</div>
   </div>`;
 }
 function printCartoes(cods){
