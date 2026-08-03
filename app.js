@@ -10692,6 +10692,10 @@ function processQrScan(text){
   persist();
   playBeep(tipo);
   showScanResultInline(rec, a, t, an);
+
+  if (window._autoWhatsAppPortaria) {
+    setTimeout(() => { sendWhatsAppAcesso(rec.cod, rec.tipo, rec.hora, rec.data); }, 150);
+  }
 }
 
 function showScanAlreadyRegisteredInline(rec, a, t, an){
@@ -10710,11 +10714,12 @@ function showScanAlreadyRegisteredInline(rec, a, t, an){
           </div>
           <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:#92400e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
           <div style="font-size:12px;color:#b45309">O registo de <b>${rec.tipo}</b> deste aluno já deu entrada anteriormente.</div>
+          <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;margin-top:8px;cursor:pointer">📲 WhatsApp Encarregado</button>
         </div>
       </div>
     `;
     clearTimeout(bannerContainer._timer);
-    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 4500);
+    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
   }
 }
 
@@ -10746,6 +10751,7 @@ function showScanResultInline(rec, a, t, an){
         <div style="text-align:right">
           <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${color}">${rec.tipo}</span>
           <div style="font-size:11px;color:var(--txt-dim);margin-top:2px;font-weight:600">${rec.hora}</div>
+          <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px;margin-top:2px" title="Notificar encarregado">📲 WhatsApp</button>
         </div>
       </div>
     `;
@@ -10765,11 +10771,12 @@ function showScanResultInline(rec, a, t, an){
           </div>
           <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
           <div style="font-size:12px;color:var(--txt-dim)">Processo: <b>${rec.cod}</b> · ${rec.classe} ${rec.turma}</div>
+          <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;margin-top:8px;cursor:pointer">📲 Notificar Encarregado (WhatsApp)</button>
         </div>
       </div>
     `;
     clearTimeout(bannerContainer._timer);
-    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 4500);
+    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
   }
 }
 
@@ -10902,6 +10909,30 @@ function sendWhatsAppAnomaly(cod, title, desc) {
   const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola';
   const msg = `⚠️ ALERTA DE PRESENÇA - ${schoolName}\n\nEducando: *${nome}*\nData: ${diIsoToday()}\n\nSituação: *${title}*\nDetalhes: ${desc}\n\nPor favor, contacte a direcção se necessário.`;
   const url = `https://wa.me/${tel ? tel.replace(/\D/g,'') : ''}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function sendWhatsAppAcesso(cod, tipo, hora, dataIso) {
+  const fa = findAluno(cod);
+  const anag = getAnag(cod) || {};
+  const tel = anag.telResp || anag.tel || '';
+  const nome = fa ? fa.a.nome : (anag.nome || cod);
+  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola Pré-Universitária Sagrada Família';
+  const dateStr = dataIso ? dataIso.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-PT');
+  
+  let msg = '';
+  if (tipo === 'ENTRADA') {
+    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* deu *ENTRADA* na escola hoje às *${hora}* (${dateStr}).\n\nTenha um bom dia!`;
+  } else {
+    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* registou a *SAÍDA* da escola hoje às *${hora}* (${dateStr}).\n\nObrigado!`;
+  }
+  
+  const cleanTel = tel ? tel.replace(/\D/g, '') : '';
+  if (!cleanTel) {
+    toast('Telefone do encarregado não registado para ' + nome, true);
+    return;
+  }
+  const url = `https://wa.me/${cleanTel}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 }
 
