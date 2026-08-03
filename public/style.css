@@ -787,9 +787,17 @@ body.portaria-locked {
   touch-action: manipulation;
 }
 
-/* ── Garantia de Legibilidade para SAÍDA (Texto Preto / Escuro) ── */
-.saida-bar, .hd-saida, [data-tipo="SAÍDA"], .tag-saida {
-  color: #000000 !important;
+/* ── Garantia de Legibilidade e Contraste para SAÍDA ── */
+.saida-bar, .hd-saida {
+  background: #e8effb !important;
+  color: #1f3b6e !important;
+  border: 1px solid #bfdbfe !important;
+  font-weight: 800 !important;
+}
+.tag-saida, [data-tipo="SAÍDA"] {
+  background: #e8effb !important;
+  color: #1f3b6e !important;
+  border: 1px solid #bfdbfe !important;
   font-weight: 800 !important;
 }
 

@@ -10984,7 +10984,7 @@ function showScanAlreadyRegisteredInline(rec, a, t, an){
 
 function showScanResultInline(rec, a, t, an){
   const isEntrada = rec.tipo === 'ENTRADA';
-  const color = isEntrada ? '#0e7d52' : '#000000';
+  const color = isEntrada ? '#0e7d52' : '#1f3b6e';
   const bgColor = isEntrada ? '#e3f5ec' : '#e8effb';
   const foto = an.foto || PHOTO_PLACEHOLDER;
   const eCnt = document.getElementById('n-entradas-count');
@@ -11008,7 +11008,7 @@ function showScanResultInline(rec, a, t, an){
           </div>
         </div>
         <div style="text-align:right">
-          <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${isEntrada ? '#0e7d52' : '#000000'}">${rec.tipo}</span>
+          <span style="font-weight:800;font-size:12px;padding:4px 10px;border-radius:6px;background:${bgColor};color:${color};border:1px solid ${isEntrada ? '#a7f3d0' : '#bfdbfe'}">${rec.tipo}</span>
           <div style="font-size:11px;color:var(--txt-dim);margin-top:2px;font-weight:600">${rec.hora}</div>
         </div>
       </div>
