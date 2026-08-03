@@ -769,10 +769,17 @@ table.hd-grid tr.brk td{background:#fbfbfc;text-align:center;font-size:7.5px;fon
 /* Portaria Kiosk Lock Mode */
 body.portaria-locked aside.side {
   display: none !important;
+  pointer-events: none !important;
 }
-body.portaria-locked header.topbar button.navtoggle {
+body.portaria-locked .side-backdrop {
+  display: none !important;
+  pointer-events: none !important;
+}
+body.portaria-locked header.topbar {
   display: none !important;
 }
-body.portaria-locked .topbar {
-  padding-left: 18px !important;
+body.portaria-locked main.main {
+  margin-left: 0 !important;
+  padding-top: 0 !important;
+  width: 100% !important;
 }
