@@ -767,19 +767,22 @@ table.hd-grid tr.brk td{background:#fbfbfc;text-align:center;font-size:7.5px;fon
 }
 
 /* Portaria Kiosk Lock Mode */
-body.portaria-locked aside.side {
+body.portaria-locked aside.side,
+body.portaria-locked .side-backdrop,
+body.portaria-locked header.topbar,
+body.portaria-locked #previewBanner,
+body.portaria-locked .pwa-banner {
   display: none !important;
   pointer-events: none !important;
-}
-body.portaria-locked .side-backdrop {
-  display: none !important;
-  pointer-events: none !important;
-}
-body.portaria-locked header.topbar {
-  display: none !important;
 }
 body.portaria-locked main.main {
   margin-left: 0 !important;
-  padding-top: 0 !important;
+  padding: 8px !important;
   width: 100% !important;
+  max-width: 100% !important;
+}
+body.portaria-locked {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
