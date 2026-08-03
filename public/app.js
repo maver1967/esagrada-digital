@@ -102,6 +102,7 @@ async function syncPush(){
     const cloudUrl = getCloudSyncUrl();
     const payload = {
       acessos: (DB.acessos || []).slice(0, 2000),
+      diario: (DB.diario || []).slice(0, 1000),
       avisos: (DB.avisos || []).slice(0, 500),
       deletedAvisos: DB.deletedAvisos || [],
       ts: Date.now()
@@ -140,6 +141,30 @@ async function syncPull(){
         DB.acessos = [...newItems, ...DB.acessos];
         updated = true;
       }
+      remote.acessos.forEach(remItem => {
+        const idx = DB.acessos.findIndex(x => String(x.id) === String(remItem.id));
+        if (idx !== -1 && JSON.stringify(DB.acessos[idx]) !== JSON.stringify(remItem)) {
+          DB.acessos[idx] = remItem;
+          updated = true;
+        }
+      });
+    }
+
+    if(Array.isArray(remote.diario) && remote.diario.length > 0){
+      if(!Array.isArray(DB.diario)) DB.diario = [];
+      const localDiarioIds = new Set(DB.diario.map(x => String(x.id)));
+      const newDiarioItems = remote.diario.filter(x => !localDiarioIds.has(String(x.id)));
+      if(newDiarioItems.length > 0){
+        DB.diario = [...newDiarioItems, ...DB.diario];
+        updated = true;
+      }
+      remote.diario.forEach(remItem => {
+        const idx = DB.diario.findIndex(x => String(x.id) === String(remItem.id));
+        if (idx !== -1 && JSON.stringify(DB.diario[idx]) !== JSON.stringify(remItem)) {
+          DB.diario[idx] = remItem;
+          updated = true;
+        }
+      });
     }
     
     if(Array.isArray(remote.deletedAvisos) && remote.deletedAvisos.length > 0){
@@ -173,7 +198,7 @@ async function syncPull(){
     if(updated){
       await storeSave(JSON.stringify(DB));
       setCloudStatus('ok');
-      if(['portaria', 'avisos', 'dash', 'mura', 'analise'].includes(UI.view)) render();
+      if(['portaria', 'avisos', 'dash', 'mura', 'analise', 'diario'].includes(UI.view)) render();
     }
   } catch(e){
     console.warn('[CloudSync Pull Error]', e);
