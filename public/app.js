@@ -94,118 +94,204 @@ function setCloudStatus(st) {
   });
 }
 
+let _syncingTimeoutTimer = null;
+let _pendingPushRequest = false;
+
+function mergeById(localArr = [], remoteArr = [], maxLimit = 2000) {
+  const map = new Map();
+  (remoteArr || []).forEach(item => {
+    if (item && item.id) map.set(String(item.id), item);
+  });
+  (localArr || []).forEach(item => {
+    if (item && item.id) {
+      const existing = map.get(String(item.id));
+      if (!existing || (item.ts && existing.ts && item.ts >= existing.ts)) {
+        map.set(String(item.id), item);
+      }
+    }
+  });
+  const merged = Array.from(map.values());
+  merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return merged.slice(0, maxLimit);
+}
+
 async function syncPush(){
+  if (!DB) return;
+  if (_isSyncing) {
+    _pendingPushRequest = true;
+    return;
+  }
+  _isSyncing = true;
+  _pendingPushRequest = false;
+  
+  clearTimeout(_syncingTimeoutTimer);
+  _syncingTimeoutTimer = setTimeout(() => { _isSyncing = false; }, 8000);
+
   try {
-    if(!DB || _isSyncing) return;
-    _isSyncing = true;
     setCloudStatus('syncing');
     const cloudUrl = getCloudSyncUrl();
+
+    let remoteData = {};
+    try {
+      const getRes = await fetch(cloudUrl, { cache: 'no-store' });
+      if (getRes.ok) remoteData = await getRes.json() || {};
+    } catch(e){}
+
+    const mergedAcessos = mergeById(DB.acessos || [], remoteData.acessos || [], 2000);
+    const mergedDiario  = mergeById(DB.diario || [], remoteData.diario || [], 1000);
+    const mergedAvisos  = mergeById(DB.avisos || [], remoteData.avisos || [], 500);
+
+    if (mergedAcessos.length !== (DB.acessos || []).length || mergedDiario.length !== (DB.diario || []).length) {
+      DB.acessos = mergedAcessos;
+      DB.diario = mergedDiario;
+      DB.avisos = mergedAvisos;
+      await storeSave(JSON.stringify(DB));
+    }
+
     const payload = {
-      acessos: (DB.acessos || []).slice(0, 2000),
-      diario: (DB.diario || []).slice(0, 1000),
-      avisos: (DB.avisos || []).slice(0, 500),
-      deletedAvisos: DB.deletedAvisos || [],
+      acessos: mergedAcessos,
+      diario: mergedDiario,
+      avisos: mergedAvisos,
+      deletedAvisos: Array.from(new Set([...(DB.deletedAvisos || []), ...(remoteData.deletedAvisos || [])])),
       ts: Date.now()
     };
-    await fetch(cloudUrl, {
+
+    const putRes = await fetch(cloudUrl, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    _lastSyncPullTs = payload.ts;
-    setCloudStatus('ok');
+
+    if (putRes.ok) {
+      _lastSyncPullTs = payload.ts;
+      setCloudStatus('ok');
+    } else {
+      setCloudStatus('error');
+    }
   } catch(e) {
     console.warn('[CloudSync Push Error]', e);
     setCloudStatus('error');
   } finally {
+    clearTimeout(_syncingTimeoutTimer);
     _isSyncing = false;
+    if (_pendingPushRequest) {
+      _pendingPushRequest = false;
+      setTimeout(syncPush, 150);
+    }
   }
 }
 
 async function syncPull(){
+  if (!DB || _isSyncing) return;
+  _isSyncing = true;
+  
+  clearTimeout(_syncingTimeoutTimer);
+  _syncingTimeoutTimer = setTimeout(() => { _isSyncing = false; }, 8000);
+
   try {
     const cloudUrl = getCloudSyncUrl();
     const res = await fetch(cloudUrl, { cache: 'no-store' });
-    if(!res.ok) return;
+    if(!res.ok) {
+      _isSyncing = false;
+      return;
+    }
     const remote = await res.json();
-    if(!remote || !remote.ts || remote.ts <= _lastSyncPullTs) return;
-    
-    _lastSyncPullTs = remote.ts;
-    let updated = false;
-    
-    if(Array.isArray(remote.acessos) && remote.acessos.length > 0){
-      if(!Array.isArray(DB.acessos)) DB.acessos = [];
-      const localIds = new Set(DB.acessos.map(x => String(x.id)));
-      const newItems = remote.acessos.filter(x => !localIds.has(String(x.id)));
-      if(newItems.length > 0){
-        DB.acessos = [...newItems, ...DB.acessos];
-        updated = true;
-      }
-      remote.acessos.forEach(remItem => {
-        const idx = DB.acessos.findIndex(x => String(x.id) === String(remItem.id));
-        if (idx !== -1 && JSON.stringify(DB.acessos[idx]) !== JSON.stringify(remItem)) {
-          DB.acessos[idx] = remItem;
-          updated = true;
+    if(!remote) {
+      _isSyncing = false;
+      return;
+    }
+
+    let localNeedsPush = false;
+    let localUpdated = false;
+
+    if (Array.isArray(remote.acessos)) {
+      if (!Array.isArray(DB.acessos)) DB.acessos = [];
+      const localMap = new Map(DB.acessos.map(x => [String(x.id), x]));
+      const remoteMap = new Map(remote.acessos.map(x => [String(x.id), x]));
+
+      remote.acessos.forEach(rem => {
+        if (!localMap.has(String(rem.id))) {
+          DB.acessos.unshift(rem);
+          localMap.set(String(rem.id), rem);
+          localUpdated = true;
+        }
+      });
+
+      DB.acessos.forEach(loc => {
+        if (!remoteMap.has(String(loc.id))) {
+          localNeedsPush = true;
         }
       });
     }
 
-    if(Array.isArray(remote.diario) && remote.diario.length > 0){
-      if(!Array.isArray(DB.diario)) DB.diario = [];
-      const localDiarioIds = new Set(DB.diario.map(x => String(x.id)));
-      const newDiarioItems = remote.diario.filter(x => !localDiarioIds.has(String(x.id)));
-      if(newDiarioItems.length > 0){
-        DB.diario = [...newDiarioItems, ...DB.diario];
-        updated = true;
-      }
-      remote.diario.forEach(remItem => {
-        const idx = DB.diario.findIndex(x => String(x.id) === String(remItem.id));
-        if (idx !== -1 && JSON.stringify(DB.diario[idx]) !== JSON.stringify(remItem)) {
-          DB.diario[idx] = remItem;
-          updated = true;
+    if (Array.isArray(remote.diario)) {
+      if (!Array.isArray(DB.diario)) DB.diario = [];
+      const localDiarioMap = new Map(DB.diario.map(x => [String(x.id), x]));
+      const remoteDiarioMap = new Map(remote.diario.map(x => [String(x.id), x]));
+
+      remote.diario.forEach(rem => {
+        if (!localDiarioMap.has(String(rem.id))) {
+          DB.diario.unshift(rem);
+          localDiarioMap.set(String(rem.id), rem);
+          localUpdated = true;
+        }
+      });
+
+      DB.diario.forEach(loc => {
+        if (!remoteDiarioMap.has(String(loc.id))) {
+          localNeedsPush = true;
         }
       });
     }
-    
-    if(Array.isArray(remote.deletedAvisos) && remote.deletedAvisos.length > 0){
-      if(!Array.isArray(DB.deletedAvisos)) DB.deletedAvisos = [];
-      remote.deletedAvisos.forEach(id => {
-        const sid = String(id);
-        if(!DB.deletedAvisos.includes(sid)) DB.deletedAvisos.push(sid);
+
+    if (Array.isArray(remote.avisos)) {
+      if (!Array.isArray(DB.avisos)) DB.avisos = [];
+      const localAvMap = new Map(DB.avisos.map(x => [String(x.id), x]));
+      const remoteAvMap = new Map(remote.avisos.map(x => [String(x.id), x]));
+
+      remote.avisos.forEach(rem => {
+        if (!localAvMap.has(String(rem.id))) {
+          DB.avisos.unshift(rem);
+          localAvMap.set(String(rem.id), rem);
+          localUpdated = true;
+        }
+      });
+
+      DB.avisos.forEach(loc => {
+        if (!remoteAvMap.has(String(loc.id))) {
+          localNeedsPush = true;
+        }
       });
     }
 
-    if(Array.isArray(remote.avisos) && remote.avisos.length > 0){
-      if(!Array.isArray(DB.avisos)) DB.avisos = [];
-      const localAvIds = new Set(DB.avisos.map(x => String(x.id)));
-      const delSet = new Set((DB.deletedAvisos || []).map(String));
-      const newAvs = remote.avisos.filter(x => !localAvIds.has(String(x.id)) && !delSet.has(String(x.id)));
-      if(newAvs.length > 0){
-        DB.avisos = [...newAvs, ...DB.avisos];
-        updated = true;
-      }
-    }
+    _lastSyncPullTs = Math.max(_lastSyncPullTs, remote.ts || 0);
 
-    if(Array.isArray(DB.deletedAvisos) && DB.deletedAvisos.length > 0){
-      const delSet = new Set(DB.deletedAvisos.map(String));
-      const lenBefore = DB.avisos ? DB.avisos.length : 0;
-      if(DB.avisos){
-        DB.avisos = DB.avisos.filter(a => !delSet.has(String(a.id)));
-        if(DB.avisos.length !== lenBefore) updated = true;
-      }
-    }
-    
-    if(updated){
+    if (localUpdated) {
+      DB.acessos.sort((a,b) => (b.ts || 0) - (a.ts || 0));
       await storeSave(JSON.stringify(DB));
       setCloudStatus('ok');
-      if(['portaria', 'avisos', 'dash', 'mura', 'analise', 'diario'].includes(UI.view)) render();
+      if (['portaria', 'avisos', 'dash', 'mura', 'analise', 'diario'].includes(UI.view)) {
+        render();
+      }
+    } else {
+      setCloudStatus('ok');
     }
-  } catch(e){
+
+    _isSyncing = false;
+    clearTimeout(_syncingTimeoutTimer);
+
+    if (localNeedsPush) {
+      setTimeout(syncPush, 100);
+    }
+  } catch(e) {
     console.warn('[CloudSync Pull Error]', e);
+    setCloudStatus('error');
+    _isSyncing = false;
+    clearTimeout(_syncingTimeoutTimer);
   }
 }
 
-setInterval(syncPull, 2000);
+setInterval(syncPull, 3000);
 
 async function persist(){
   setSave('saving');
