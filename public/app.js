@@ -10649,7 +10649,334 @@ function playBeep(type = true) {
       osc.frequency.setValueAtTime(350, ctx.currentTime);
       osc.frequency.setValueAtTime(250, ctx.currentTime + 0.12);
     } else if (type === 'SAÍDA') {
-      osc.frequency.setValueAtTime(520, ctx.currentTimVIEWS.portaria = function(r){
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+    } else {
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+    }
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch(e){}
+}
+
+function processQrScan(text){
+  const cod = String(text).replace(/^ESAGRADA:/i, '').trim();
+  const fa = findAluno(cod);
+  if(!fa){ toast('Aluno não encontrado: ' + cod, true); playBeep('warning'); return; }
+  const {tk, t, a} = fa;
+  const an = getAnag(cod) || {};
+  const tipo = getAutoTipoAcesso();
+  const now = new Date();
+  const z = n => String(n).padStart(2,'0');
+  const horaStr = `${z(now.getHours())}:${z(now.getMinutes())}:${z(now.getSeconds())}`;
+  const dataIso = diIsoToday();
+  ensureAcessos();
+
+  // Check if student already scanned for this mode today
+  const existingToday = DB.acessos.find(x => x.cod === cod && x.data === dataIso && x.tipo === tipo);
+  if(existingToday){
+    const lastWarn = _lastScanWarnMap[cod] || 0;
+    if(Date.now() - lastWarn < 1500) return;
+    _lastScanWarnMap[cod] = Date.now();
+
+    playBeep('warning');
+    showScanAlreadyRegisteredInline(existingToday, a, t, an);
+    return;
+  }
+
+  const rec = { id: uid(), cod, nome: a.nome, tk, classe: t.classe, turma: t.turma, tipo, data: dataIso, hora: horaStr, ts: Date.now(), notificado: false };
+  DB.acessos.unshift(rec);
+  
+  // 1. Transmissão imediata & persistência
+  persist();
+
+  // 2. Transmissão em tempo real entre abas / dispositivos (BroadcastChannel)
+  try {
+    if (window.BroadcastChannel) {
+      if (!window._esagradaBC) window._esagradaBC = new BroadcastChannel('esagrada_realtime');
+      window._esagradaBC.postMessage({ type: 'PORTARIA_SCAN', record: rec });
+    }
+  } catch(e){}
+
+  playBeep(tipo);
+  showScanResultInline(rec, a, t, an);
+
+  // 3. Envio automático de notificação WhatsApp / SMS se ativado
+  if (window._autoWhatsAppPortaria) {
+    setTimeout(() => { sendWhatsAppAcesso(rec.cod, rec.tipo, rec.hora, rec.data); }, 150);
+  }
+}
+
+function showScanAlreadyRegisteredInline(rec, a, t, an){
+  const color = '#d97706';
+  const bgColor = '#fef3c7';
+  const foto = an.foto || PHOTO_PLACEHOLDER;
+  const bannerContainer = document.getElementById('scan-banner-container');
+  if(bannerContainer) {
+    bannerContainer.innerHTML = `
+      <div style="background:${bgColor};border:2px solid ${color};padding:14px 18px;border-radius:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(217,119,6,0.15);animation:shake 0.3s ease">
+        <img src="${foto}" style="width:52px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #fff;background:#fff;flex-shrink:0">
+        <div style="flex:1;min-width:0;text-align:left">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:12px;background:${color};color:#fff;text-transform:uppercase">⚠️ ALUNO JÁ REGISTADO HOJE</span>
+            <span style="font-size:12px;font-weight:800;color:${color}">às ${rec.hora}</span>
+          </div>
+          <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:#92400e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
+          <div style="font-size:12px;color:#b45309">O registo de <b>${rec.tipo}</b> deste aluno já deu entrada anteriormente.</div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">📲 WhatsApp</button>
+            <button class="btn sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#2563eb;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">💬 SMS</button>
+          </div>
+        </div>
+      </div>
+    `;
+    clearTimeout(bannerContainer._timer);
+    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
+  }
+}
+
+function showScanResultInline(rec, a, t, an){
+  const isEntrada = rec.tipo === 'ENTRADA';
+  const color = isEntrada ? '#0e7d52' : '#2155b8';
+  const bgColor = isEntrada ? '#e3f5ec' : '#e8effb';
+  const foto = an.foto || PHOTO_PLACEHOLDER;
+  const eCnt = document.getElementById('n-entradas-count');
+  const sCnt = document.getElementById('n-saidas-count');
+  if(eCnt && sCnt) {
+    const acessosHoje = (DB.acessos||[]).filter(x => x.data === diIsoToday());
+    eCnt.textContent = acessosHoje.filter(x => x.tipo === 'ENTRADA').length;
+    sCnt.textContent = acessosHoje.filter(x => x.tipo === 'SAÍDA').length;
+  }
+  const listEl = document.getElementById('acessos-rows-list');
+  if(listEl) {
+    const rowHtml = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--bg-card)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:10px;background:${isEntrada ? '#e3f5ec' : '#e8effb'};color:${color};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">
+            ${isEntrada ? '🟢' : '🔵'}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--txt)">${esc(a.nome)}</div>
+            <div style="font-size:11px;color:var(--txt-dim)">${rec.cod} · ${rec.classe} (Turma ${rec.turma})</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${color}">${rec.tipo}</span>
+          <div style="font-size:11px;color:var(--txt-dim);margin-top:2px;font-weight:600">${rec.hora}</div>
+          <div style="display:flex;gap:4px;margin-top:2px;justify-content:flex-end">
+            <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px" title="Notificar encarregado via WhatsApp">📲 WA</button>
+            <button class="btn ghost sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#2563eb;font-size:11px;padding:2px 6px" title="Notificar encarregado via SMS">💬 SMS</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const emptyEl = listEl.querySelector('.empty');
+    if(emptyEl) emptyEl.remove();
+    listEl.insertAdjacentHTML('afterbegin', rowHtml);
+  }
+  const bannerContainer = document.getElementById('scan-banner-container');
+  if(bannerContainer) {
+    bannerContainer.innerHTML = `
+      <div style="background:${bgColor};border:2px solid ${color};padding:14px 18px;border-radius:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,0.08)">
+        <img src="${foto}" style="width:52px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #fff;background:#fff;flex-shrink:0">
+        <div style="flex:1;min-width:0;text-align:left">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:12px;background:${color};color:#fff;text-transform:uppercase">${isEntrada ? '✓ ENTRADA REGISTADA' : '✓ SAÍDA REGISTADA'}</span>
+            <span style="font-size:12px;font-weight:800;color:${color}">${rec.hora}</span>
+          </div>
+          <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
+          <div style="font-size:12px;color:var(--txt-dim)">Processo: <b>${rec.cod}</b> · ${rec.classe} ${rec.turma}</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">📲 WhatsApp</button>
+            <button class="btn sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#2563eb;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">💬 SMS Encarregado</button>
+          </div>
+        </div>
+      </div>
+    `;
+    clearTimeout(bannerContainer._timer);
+    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
+  }
+}
+
+function detectPresenceAnomalies(dateIso = diIsoToday()) {
+  const acessosHoje = (DB.acessos || []).filter(x => x.data === dateIso);
+  const dia = diDiaFromIso(dateIso);
+  const studentMap = {};
+
+  turmaKeys().forEach(tk => {
+    const t = NOTAS.turmas[tk];
+    if(!t || !t.roster) return;
+    const dayRows = lpDayRows(tk, dia, dateIso);
+
+    Object.keys(t.roster).forEach(cod => {
+      const st = t.roster[cod];
+      if(!st) return;
+
+      let classesPresentes = 0;
+      let classesFaltas = 0;
+      let faltasDetail = [];
+      let totalClassesRegd = 0;
+
+      dayRows.forEach(R => {
+        if(!R.regd) return;
+        totalClassesRegd++;
+        const ab = R.absent.find(x => x.num === st.num);
+        if(ab) {
+          classesFaltas++;
+          faltasDetail.push(`${R.disc} (${R.horario})${ab.just?' [Justificada]':''}`);
+        } else {
+          classesPresentes++;
+        }
+      });
+
+      studentMap[cod] = {
+        cod,
+        nome: st.nome,
+        num: st.num,
+        tk,
+        classe: t.classe,
+        turma: t.turma,
+        entradas: [],
+        saidas: [],
+        classesPresentes,
+        classesFaltas,
+        faltasDetail,
+        totalClassesRegd,
+        anomalies: []
+      };
+    });
+  });
+
+  acessosHoje.forEach(ac => {
+    if(studentMap[ac.cod]) {
+      if(ac.tipo === 'ENTRADA') studentMap[ac.cod].entradas.push(ac.hora);
+      if(ac.tipo === 'SAÍDA') studentMap[ac.cod].saidas.push(ac.hora);
+    }
+  });
+
+  const results = [];
+  Object.values(studentMap).forEach(s => {
+    const hasEntrada = s.entradas.length > 0;
+    const hasSaida = s.saidas.length > 0;
+
+    // 🔴 Anomalia 1: Falsa Presença (Sem entrada na portaria + Presente na aula)
+    if (!hasEntrada && s.classesPresentes > 0) {
+      s.anomalies.push({
+        type: 'FALSA_PRESENCA',
+        severity: 'CRITICA',
+        title: '🔴 Falsa Presença em Aula',
+        desc: `Sem entrada registada na portaria, mas foi marcado como presente em ${s.classesPresentes} aula(s).`,
+        bg: '#fde3e1', fg: '#a8231b'
+      });
+    }
+
+    // 🟠 Anomalia 2: Fuga à Aula (Entrada na portaria + Falta na aula)
+    if (hasEntrada && s.classesFaltas > 0) {
+      s.anomalies.push({
+        type: 'FUGA_AULA',
+        severity: 'CRITICA',
+        title: '🟠 Fuga à Aula (Falta em Aula após Entrada)',
+        desc: `Deu entrada às ${s.entradas.join(', ')}, mas registou falta em: ${s.faltasDetail.join('; ')}.`,
+        bg: '#fff1d6', fg: '#8a6a12'
+      });
+    }
+
+    // 🟡 Anomalia 3: Saída sem Entrada
+    if (hasSaida && !hasEntrada) {
+      s.anomalies.push({
+        type: 'SAIDA_SEM_ENTRADA',
+        severity: 'MEDIA',
+        title: '🟡 Saída sem Entrada Registada',
+        desc: `Registou saída às ${s.saidas.join(', ')}, mas não tem registo de entrada no sistema.`,
+        bg: '#fef9c3', fg: '#854d0e'
+      });
+    }
+
+    // ⚪ Ausente Normal (Sem entrada + Ausente na aula / faltas)
+    if (!hasEntrada && !hasSaida && s.classesFaltas > 0 && s.classesPresentes === 0) {
+      s.anomalies.push({
+        type: 'AUSENTE_NORMAL',
+        severity: 'INFO',
+        title: '⚪ Ausente Confirmado (Normal)',
+        desc: `Sem entrada na portaria e marcado ausente em todas as aulas de hoje.`,
+        bg: '#f3f4f6', fg: '#4b5563'
+      });
+    }
+
+    // 🟢 Presente Normal
+    if (hasEntrada && s.classesPresentes > 0 && s.classesFaltas === 0) {
+      s.anomalies.push({
+        type: 'PRESENTE_NORMAL',
+        severity: 'OK',
+        title: '🟢 Presente Confirmado',
+        desc: `Entrada registada na portaria (${s.entradas[0]}) e presença em aula confirmada.`,
+        bg: '#e3f5ec', fg: '#0e7d52'
+      });
+    }
+
+    results.push(s);
+  });
+
+  return results;
+}
+
+function sendWhatsAppAnomaly(cod, title, desc) {
+  const anag = getAnag(cod) || {};
+  const tel = anag.telResp || anag.tel || '';
+  const nome = anag.nome || cod;
+  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola';
+  const msg = `⚠️ ALERTA DE PRESENÇA - ${schoolName}\n\nEducando: *${nome}*\nData: ${diIsoToday()}\n\nSituação: *${title}*\nDetalhes: ${desc}\n\nPor favor, contacte a direcção se necessário.`;
+  const cleanTel = tel ? tel.replace(/\D/g, '') : '';
+  const url = `https://wa.me/${cleanTel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function sendWhatsAppAcesso(cod, tipo, hora, dataIso) {
+  const fa = findAluno(cod);
+  const anag = getAnag(cod) || {};
+  const tel = anag.telResp || anag.tel || '';
+  const nome = fa ? fa.a.nome : (anag.nome || cod);
+  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola Pré-Universitária Sagrada Família';
+  const dateStr = dataIso ? dataIso.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-PT');
+  
+  let msg = '';
+  if (tipo === 'ENTRADA') {
+    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* deu *ENTRADA* na escola hoje às *${hora}* (${dateStr}).\n\nTenha um bom dia!\nPlataforma ESAGRADA Digital`;
+  } else {
+    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* registou a *SAÍDA* da escola hoje às *${hora}* (${dateStr}).\n\nObrigado!\nPlataforma ESAGRADA Digital`;
+  }
+  
+  const cleanTel = tel ? tel.replace(/\D/g, '') : '';
+  if (!cleanTel) {
+    toast('Telefone do encarregado não registado para ' + nome, true);
+    return;
+  }
+  const url = `https://wa.me/${cleanTel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function sendSMSAcesso(cod, tipo, hora, dataIso) {
+  const fa = findAluno(cod);
+  const anag = getAnag(cod) || {};
+  const tel = anag.telResp || anag.tel || '';
+  const nome = fa ? fa.a.nome : (anag.nome || cod);
+  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'ESAGRADA';
+  const dateStr = dataIso ? dataIso.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-PT');
+  
+  const cleanTel = tel ? tel.replace(/\D/g, '') : '';
+  if (!cleanTel) {
+    toast('Telefone do encarregado não registado para ' + nome, true);
+    return;
+  }
+  const msg = `${schoolName}: Educando ${nome} registou ${tipo} na escola as ${hora} (${dateStr}).`;
+  const url = `sms:${cleanTel}?body=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+VIEWS.portaria = function(r){
   setSub('Controlo de Acessos & Auditoria de Presença');
   ensureAcessos();
   applyPortariaLockState();
