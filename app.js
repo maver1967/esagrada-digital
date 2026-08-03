@@ -1164,25 +1164,15 @@ function getTeacherTurmaKeys(tid){
     }
   });
 
-  // 2. Check TURMA_PROFS
-  if (typeof TURMA_PROFS !== 'undefined') {
-    Object.entries(TURMA_PROFS).forEach(([tk, discs]) => {
-      Object.values(discs).forEach(pName => {
-        const pL = String(pName||'').trim().toLowerCase();
-        if (pL && (pL === tName || pL === tLabel || (tName && pL.includes(tName)) || (tLabel && pL.includes(tLabel)))) {
-          matched.add(tk);
-        }
-      });
-    });
-  }
-
-  // 3. Check NOTAS.profs
-  if (typeof NOTAS !== 'undefined' && NOTAS.profs) {
-    Object.entries(NOTAS.profs).forEach(([disc, pName]) => {
-      const pL = String(pName||'').trim().toLowerCase();
-      if (pL && (pL === tName || pL === tLabel || (tName && (pL.includes(tName) || tName.includes(pL))) || (tLabel && (pL.includes(tLabel) || tLabel.includes(pL))))) {
-        allTks.forEach(tk => {
-          if (NOTAS.turmas[tk] && NOTAS.turmas[tk].discs && NOTAS.turmas[tk].discs.includes(disc)) {
+  // 2. Check TURMA_PROFS & NOTAS.profs via profOf
+  if (typeof NOTAS !== 'undefined' && NOTAS.turmas) {
+    allTks.forEach(tk => {
+      const tInfo = NOTAS.turmas[tk];
+      if (tInfo && Array.isArray(tInfo.discs)) {
+        tInfo.discs.forEach(disc => {
+          const pName = typeof profOf === 'function' ? profOf(tk, disc) : ((NOTAS && NOTAS.profs) ? NOTAS.profs[disc] : '');
+          const pL = String(pName||'').trim().toLowerCase();
+          if (pL && (pL === tName || pL === tLabel || (tName && (pL.includes(tName) || tName.includes(pL))) || (tLabel && (pL.includes(tLabel) || tLabel.includes(pL))))) {
             matched.add(tk);
           }
         });
