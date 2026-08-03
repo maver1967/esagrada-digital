@@ -1126,23 +1126,26 @@ const DAYS_ORDER = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
 
 let PREVIEW_TEACHER = null;
 function currentTeacherId(){
+  if (PREVIEW_TEACHER && DB && DB.teachers && DB.teachers.some(t=>t.id===PREVIEW_TEACHER)) return PREVIEW_TEACHER;
   if (AUTH_USER && DB && Array.isArray(DB.teachers)) {
-    if (AUTH_USER.role === 'professor' || AUTH_USER.role === 'diretor') {
-      const uName = String(AUTH_USER.nome || '').trim().toLowerCase();
-      const uId = String(AUTH_USER.id || '').trim().toLowerCase();
-      const match = DB.teachers.find(t => {
-        if (String(t.id).toLowerCase() === uId) return true;
-        const tName = String(t.name || t.nome || '').trim().toLowerCase();
-        const tLbl = String(typeof teacherLabel === 'function' ? teacherLabel(t) : '').trim().toLowerCase();
-        if (tName === uName || tLbl === uName) return true;
-        if (uName.includes('roberto') && (tName.includes('roberto') || tLbl.includes('roberto'))) return true;
-        if (uName.includes('maver') && (tName.includes('maver') || tLbl.includes('maver'))) return true;
-        return false;
-      });
-      if (match) return match.id;
-    }
+    const uName = String(AUTH_USER.nome || '').trim().toLowerCase();
+    const uId = String(AUTH_USER.id || '').trim().toLowerCase();
+    const dirName = String((DB.settings && DB.settings.director) || '').trim().toLowerCase();
+    const match = DB.teachers.find(t => {
+      if (String(t.id).toLowerCase() === uId) return true;
+      const tName = String(t.name || t.nome || '').trim().toLowerCase();
+      const tLbl = String(typeof teacherLabel === 'function' ? teacherLabel(t) : '').trim().toLowerCase();
+      if (tName === uName || tLbl === uName) return true;
+      if (uName.includes('roberto') && (tName.includes('roberto') || tLbl.includes('roberto'))) return true;
+      if (uName.includes('maver') && (tName.includes('maver') || tLbl.includes('maver'))) return true;
+      if ((AUTH_USER.role === 'direcao' || AUTH_USER.role === 'diretor') && dirName) {
+        if (dirName.includes('maver') && (tName.includes('maver') || tLbl.includes('maver'))) return true;
+        if (dirName.includes('roberto') && (tName.includes('roberto') || tLbl.includes('roberto'))) return true;
+      }
+      return false;
+    });
+    if (match) return match.id;
   }
-  if(PREVIEW_TEACHER && DB && DB.teachers && DB.teachers.some(t=>t.id===PREVIEW_TEACHER)) return PREVIEW_TEACHER;
   return (DB && DB.teachers && DB.teachers[0]) ? DB.teachers[0].id : '';
 }
 
@@ -1202,12 +1205,11 @@ function getTeacherTurmaKeys(tid){
     const t = NOTAS && NOTAS.turmas ? NOTAS.turmas[tk] : null;
     if (!t) return;
     const nameWithT = `${t.classe} T${t.turma}`.toLowerCase();
-    const nameClasseOnly = String(t.classe).toLowerCase();
     const tkLower = String(tk).toLowerCase();
 
     const matchName = clsNames.some(cn => {
       const cnl = String(cn).toLowerCase();
-      return cnl === nameWithT || cnl === tkLower || cnl === nameClasseOnly;
+      return cnl === nameWithT || cnl === tkLower;
     });
 
     const matchAsg = asgCids.some(cid => {
@@ -1255,7 +1257,7 @@ function getTeacherDiscsForTurma(tid, tk){
   const tName = tObj ? (tObj.name || tObj.nome || '').trim().toLowerCase() : '';
   const tLabel = tObj && typeof teacherLabel === 'function' ? teacherLabel(tObj).trim().toLowerCase() : '';
   const dtVal = String(dts[tk]||'').trim().toLowerCase();
-  const isDt = PREVIEW_ROLE === 'diretor' || (dtVal && (dtVal === String(tid).toLowerCase() || dtVal === tName || dtVal === tLabel));
+  const isDt = (dtVal && (dtVal === String(tid).toLowerCase() || dtVal === tName || dtVal === tLabel));
   if (isDt) {
     return t.discs || [];
   }
