@@ -10649,294 +10649,7 @@ function playBeep(type = true) {
       osc.frequency.setValueAtTime(350, ctx.currentTime);
       osc.frequency.setValueAtTime(250, ctx.currentTime + 0.12);
     } else if (type === 'SAÍDA') {
-      osc.frequency.setValueAtTime(520, ctx.currentTime);
-    } else {
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-    }
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.25);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.25);
-  } catch(e){}
-}
-
-function processQrScan(text){
-  const cod = String(text).replace(/^ESAGRADA:/i, '').trim();
-  const fa = findAluno(cod);
-  if(!fa){ toast('Aluno não encontrado: ' + cod, true); playBeep(false); return; }
-  const {tk, t, a} = fa;
-  const an = getAnag(cod) || {};
-  const tipo = getAutoTipoAcesso();
-  const now = new Date();
-  const z = n => String(n).padStart(2,'0');
-  const horaStr = `${z(now.getHours())}:${z(now.getMinutes())}:${z(now.getSeconds())}`;
-  const dataIso = diIsoToday();
-  ensureAcessos();
-
-  // Check if student already scanned for this mode today
-  const existingToday = DB.acessos.find(x => x.cod === cod && x.data === dataIso && x.tipo === tipo);
-  if(existingToday){
-    const lastWarn = _lastScanWarnMap[cod] || 0;
-    if(Date.now() - lastWarn < 1500) return;
-    _lastScanWarnMap[cod] = Date.now();
-
-    playBeep('warning');
-    showScanAlreadyRegisteredInline(existingToday, a, t, an);
-    return;
-  }
-
-  const rec = { id: uid(), cod, nome: a.nome, tk, classe: t.classe, turma: t.turma, tipo, data: dataIso, hora: horaStr, ts: Date.now(), notificado: false };
-  DB.acessos.unshift(rec);
-  persist();
-  playBeep(tipo);
-  showScanResultInline(rec, a, t, an);
-
-  if (window._autoWhatsAppPortaria) {
-    setTimeout(() => { sendWhatsAppAcesso(rec.cod, rec.tipo, rec.hora, rec.data); }, 150);
-  }
-}
-
-function showScanAlreadyRegisteredInline(rec, a, t, an){
-  const color = '#d97706';
-  const bgColor = '#fef3c7';
-  const foto = an.foto || PHOTO_PLACEHOLDER;
-  const bannerContainer = document.getElementById('scan-banner-container');
-  if(bannerContainer) {
-    bannerContainer.innerHTML = `
-      <div style="background:${bgColor};border:2px solid ${color};padding:14px 18px;border-radius:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(217,119,6,0.15);animation:shake 0.3s ease">
-        <img src="${foto}" style="width:52px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #fff;background:#fff;flex-shrink:0">
-        <div style="flex:1;min-width:0;text-align:left">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-            <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:12px;background:${color};color:#fff;text-transform:uppercase">⚠️ ALUNO JÁ REGISTADO HOJE</span>
-            <span style="font-size:12px;font-weight:800;color:${color}">às ${rec.hora}</span>
-          </div>
-          <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:#92400e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
-          <div style="font-size:12px;color:#b45309">O registo de <b>${rec.tipo}</b> deste aluno já deu entrada anteriormente.</div>
-          <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;margin-top:8px;cursor:pointer">📲 WhatsApp Encarregado</button>
-        </div>
-      </div>
-    `;
-    clearTimeout(bannerContainer._timer);
-    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
-  }
-}
-
-function showScanResultInline(rec, a, t, an){
-  const isEntrada = rec.tipo === 'ENTRADA';
-  const color = isEntrada ? '#0e7d52' : '#2155b8';
-  const bgColor = isEntrada ? '#e3f5ec' : '#e8effb';
-  const foto = an.foto || PHOTO_PLACEHOLDER;
-  const eCnt = document.getElementById('n-entradas-count');
-  const sCnt = document.getElementById('n-saidas-count');
-  if(eCnt && sCnt) {
-    const acessosHoje = (DB.acessos||[]).filter(x => x.data === diIsoToday());
-    eCnt.textContent = acessosHoje.filter(x => x.tipo === 'ENTRADA').length;
-    sCnt.textContent = acessosHoje.filter(x => x.tipo === 'SAÍDA').length;
-  }
-  const listEl = document.getElementById('acessos-rows-list');
-  if(listEl) {
-    const rowHtml = `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--bg-card)">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:36px;height:36px;border-radius:10px;background:${isEntrada ? '#e3f5ec' : '#e8effb'};color:${color};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">
-            ${isEntrada ? '🟢' : '🔵'}
-          </div>
-          <div>
-            <div style="font-weight:700;font-size:14px;color:var(--txt)">${esc(a.nome)}</div>
-            <div style="font-size:11px;color:var(--txt-dim)">${rec.cod} · ${rec.classe} (Turma ${rec.turma})</div>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${color}">${rec.tipo}</span>
-          <div style="font-size:11px;color:var(--txt-dim);margin-top:2px;font-weight:600">${rec.hora}</div>
-          <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px;margin-top:2px" title="Notificar encarregado">📲 WhatsApp</button>
-        </div>
-      </div>
-    `;
-    const emptyEl = listEl.querySelector('.empty');
-    if(emptyEl) emptyEl.remove();
-    listEl.insertAdjacentHTML('afterbegin', rowHtml);
-  }
-  const bannerContainer = document.getElementById('scan-banner-container');
-  if(bannerContainer) {
-    bannerContainer.innerHTML = `
-      <div style="background:${bgColor};border:2px solid ${color};padding:14px 18px;border-radius:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,0.08)">
-        <img src="${foto}" style="width:52px;height:64px;object-fit:cover;border-radius:8px;border:2px solid #fff;background:#fff;flex-shrink:0">
-        <div style="flex:1;min-width:0;text-align:left">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-            <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:12px;background:${color};color:#fff;text-transform:uppercase">${isEntrada ? '✓ ENTRADA REGISTADA' : '✓ SAÍDA REGISTADA'}</span>
-            <span style="font-size:12px;font-weight:800;color:${color}">${rec.hora}</span>
-          </div>
-          <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
-          <div style="font-size:12px;color:var(--txt-dim)">Processo: <b>${rec.cod}</b> · ${rec.classe} ${rec.turma}</div>
-          <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;margin-top:8px;cursor:pointer">📲 Notificar Encarregado (WhatsApp)</button>
-        </div>
-      </div>
-    `;
-    clearTimeout(bannerContainer._timer);
-    bannerContainer._timer = setTimeout(() => { bannerContainer.innerHTML = ''; }, 6000);
-  }
-}
-
-function detectPresenceAnomalies(dateIso = diIsoToday()) {
-  const acessosHoje = (DB.acessos || []).filter(x => x.data === dateIso);
-  const dia = diDiaFromIso(dateIso);
-  const studentMap = {};
-
-  turmaKeys().forEach(tk => {
-    const t = NOTAS.turmas[tk];
-    if(!t || !t.roster) return;
-    const dayRows = lpDayRows(tk, dia, dateIso);
-
-    Object.keys(t.roster).forEach(cod => {
-      const st = t.roster[cod];
-      if(!st) return;
-
-      let classesPresentes = 0;
-      let classesFaltas = 0;
-      let faltasDetail = [];
-      let totalClassesRegd = 0;
-
-      dayRows.forEach(R => {
-        if(!R.regd) return;
-        totalClassesRegd++;
-        const ab = R.absent.find(x => x.num === st.num);
-        if(ab) {
-          classesFaltas++;
-          faltasDetail.push(`${R.disc} (${R.horario})${ab.just?' [Justificada]':''}`);
-        } else {
-          classesPresentes++;
-        }
-      });
-
-      studentMap[cod] = {
-        cod,
-        nome: st.nome,
-        num: st.num,
-        tk,
-        classe: t.classe,
-        turma: t.turma,
-        entradas: [],
-        saidas: [],
-        classesPresentes,
-        classesFaltas,
-        faltasDetail,
-        totalClassesRegd,
-        anomalies: []
-      };
-    });
-  });
-
-  acessosHoje.forEach(ac => {
-    if(studentMap[ac.cod]) {
-      if(ac.tipo === 'ENTRADA') studentMap[ac.cod].entradas.push(ac.hora);
-      if(ac.tipo === 'SAÍDA') studentMap[ac.cod].saidas.push(ac.hora);
-    }
-  });
-
-  const results = [];
-  Object.values(studentMap).forEach(s => {
-    const hasEntrada = s.entradas.length > 0;
-    const hasSaida = s.saidas.length > 0;
-
-    // 🔴 Anomalia 1: Falsa Presença (Sem entrada na portaria + Presente na aula)
-    if (!hasEntrada && s.classesPresentes > 0) {
-      s.anomalies.push({
-        type: 'FALSA_PRESENCA',
-        severity: 'CRITICA',
-        title: '🔴 Falsa Presença em Aula',
-        desc: `Sem entrada registada na portaria, mas foi marcado como presente em ${s.classesPresentes} aula(s).`,
-        bg: '#fde3e1', fg: '#a8231b'
-      });
-    }
-
-    // 🟠 Anomalia 2: Fuga à Aula (Entrada na portaria + Falta na aula)
-    if (hasEntrada && s.classesFaltas > 0) {
-      s.anomalies.push({
-        type: 'FUGA_AULA',
-        severity: 'CRITICA',
-        title: '🟠 Fuga à Aula (Falta em Aula após Entrada)',
-        desc: `Deu entrada às ${s.entradas.join(', ')}, mas registou falta em: ${s.faltasDetail.join('; ')}.`,
-        bg: '#fff1d6', fg: '#8a6a12'
-      });
-    }
-
-    // 🟡 Anomalia 3: Saída sem Entrada
-    if (hasSaida && !hasEntrada) {
-      s.anomalies.push({
-        type: 'SAIDA_SEM_ENTRADA',
-        severity: 'MEDIA',
-        title: '🟡 Saída sem Entrada Registada',
-        desc: `Registou saída às ${s.saidas.join(', ')}, mas não tem registo de entrada no sistema.`,
-        bg: '#fef9c3', fg: '#854d0e'
-      });
-    }
-
-    // ⚪ Ausente Normal (Sem entrada + Ausente na aula / faltas)
-    if (!hasEntrada && !hasSaida && s.classesFaltas > 0 && s.classesPresentes === 0) {
-      s.anomalies.push({
-        type: 'AUSENTE_NORMAL',
-        severity: 'INFO',
-        title: '⚪ Ausente Confirmado (Normal)',
-        desc: `Sem entrada na portaria e marcado ausente em todas as aulas de hoje.`,
-        bg: '#f3f4f6', fg: '#4b5563'
-      });
-    }
-
-    // 🟢 Presente Normal
-    if (hasEntrada && s.classesPresentes > 0 && s.classesFaltas === 0) {
-      s.anomalies.push({
-        type: 'PRESENTE_NORMAL',
-        severity: 'OK',
-        title: '🟢 Presente Confirmado',
-        desc: `Entrada registada na portaria (${s.entradas[0]}) e presença em aula confirmada.`,
-        bg: '#e3f5ec', fg: '#0e7d52'
-      });
-    }
-
-    results.push(s);
-  });
-
-  return results;
-}
-
-function sendWhatsAppAnomaly(cod, title, desc) {
-  const anag = getAnag(cod) || {};
-  const tel = anag.telResp || anag.tel || '';
-  const nome = anag.nome || cod;
-  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola';
-  const msg = `⚠️ ALERTA DE PRESENÇA - ${schoolName}\n\nEducando: *${nome}*\nData: ${diIsoToday()}\n\nSituação: *${title}*\nDetalhes: ${desc}\n\nPor favor, contacte a direcção se necessário.`;
-  const url = `https://wa.me/${tel ? tel.replace(/\D/g,'') : ''}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-}
-
-function sendWhatsAppAcesso(cod, tipo, hora, dataIso) {
-  const fa = findAluno(cod);
-  const anag = getAnag(cod) || {};
-  const tel = anag.telResp || anag.tel || '';
-  const nome = fa ? fa.a.nome : (anag.nome || cod);
-  const schoolName = (DB.settings && DB.settings.schoolName) ? DB.settings.schoolName : 'Escola Pré-Universitária Sagrada Família';
-  const dateStr = dataIso ? dataIso.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-PT');
-  
-  let msg = '';
-  if (tipo === 'ENTRADA') {
-    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* deu *ENTRADA* na escola hoje às *${hora}* (${dateStr}).\n\nTenha um bom dia!`;
-  } else {
-    msg = `🔔 *${schoolName.toUpperCase()}*\n\nEstimado(a) Encarregado(a),\nInformamos que o(a) seu(sua) educando(a) *${nome}* registou a *SAÍDA* da escola hoje às *${hora}* (${dateStr}).\n\nObrigado!`;
-  }
-  
-  const cleanTel = tel ? tel.replace(/\D/g, '') : '';
-  if (!cleanTel) {
-    toast('Telefone do encarregado não registado para ' + nome, true);
-    return;
-  }
-  const url = `https://wa.me/${cleanTel}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-}
-
-VIEWS.portaria = function(r){
+      osc.frequency.setValueAtTime(520, ctx.currentTimVIEWS.portaria = function(r){
   setSub('Controlo de Acessos & Auditoria de Presença');
   ensureAcessos();
   applyPortariaLockState();
@@ -10949,23 +10662,236 @@ VIEWS.portaria = function(r){
   const autoColor = autoTipo === 'ENTRADA' ? '#0e7d52' : '#2155b8';
   const autoBg = autoTipo === 'ENTRADA' ? '#e3f5ec' : '#e8effb';
 
-  const acessosHoje = DB.acessos.filter(x => x.data === diIsoToday());
-  const nEntradas = acessosHoje.filter(x => x.tipo === 'ENTRADA').length;
-  const nSaidas = acessosHoje.filter(x => x.tipo === 'SAÍDA').length;
+  const isLocked = window._portariaLocked !== false;
 
-  const anomaliesData = detectPresenceAnomalies(diIsoToday());
-  const criticalAnomalies = anomaliesData.filter(s => s.anomalies.some(a => a.severity === 'CRITICA'));
-  const nFalsaPresenca = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FALSA_PRESENCA')).length;
-  const nFugaAula = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FUGA_AULA')).length;
-  const nSaidaSemEntrada = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'SAIDA_SEM_ENTRADA')).length;
+  if (isLocked) {
+    r.innerHTML = `
+      <div style="max-width:520px;margin:0 auto;padding:4px">
+        <!-- KIOSK LOCKED TOP BAR -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-card);border:2px solid var(--brand,#0e7d52);border-radius:18px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">📱</span>
+            <div>
+              <div style="font-weight:800;font-size:14px;color:var(--txt)">Portaria · Leitura de Cartão</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+                <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;background:${autoBg};color:${autoColor};text-transform:uppercase">${autoTipo === 'ENTRADA' ? '🟢 ENTRADA' : '🔵 SAÍDA'}</span>
+                <label style="font-size:11px;font-weight:700;color:var(--txt-dim);display:inline-flex;align-items:center;gap:4px;cursor:pointer">
+                  <input type="checkbox" onchange="window._autoWhatsAppPortaria=this.checked" ${window._autoWhatsAppPortaria ? 'checked' : ''}> 📲 Auto WhatsApp
+                </label>
+              </div>
+            </div>
+          </div>
+          <button class="btn dng" onclick="togglePortariaPassInput('dash')" style="border-radius:14px;padding:9px 14px;font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(193,18,31,0.25)" title="Clique para digitar a palavra-passe e desbloquear">
+            <span style="font-size:15px">🔒</span> <span>Desbloquear</span>
+          </button>
+        </div>
 
-  const rows = acessosHoje.map(rec => {
-    const isE = rec.tipo === 'ENTRADA';
-    const tagBg = isE ? '#e3f5ec' : '#e8effb';
-    const tagFg = isE ? '#0e7d52' : '#2155b8';
-    return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)">
-        <div style="display:flex;align-items:center;gap:12px">
+        <!-- LIVE RESULT BANNER (SCANNER FEEDBACK) -->
+        <div id="scan-banner-container"></div>
+
+        <!-- CAMERA SCANNER FEED -->
+        <div class="card" style="padding:14px;text-align:center;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,0.06)">
+          <div id="qr-reader" style="width:100%;max-width:480px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px dashed var(--line);background:var(--bg-body)"></div>
+          <div style="font-size:11.5px;color:var(--txt-dim);margin-top:10px;font-weight:600">
+            📷 Aponte o código QR do cartão para a câmara do telemóvel.
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // UNLOCKED MANAGEMENT VIEW
+    const acessosHoje = DB.acessos.filter(x => x.data === diIsoToday());
+    const nEntradas = acessosHoje.filter(x => x.tipo === 'ENTRADA').length;
+    const nSaidas = acessosHoje.filter(x => x.tipo === 'SAÍDA').length;
+
+    const anomaliesData = detectPresenceAnomalies(diIsoToday());
+    const criticalAnomalies = anomaliesData.filter(s => s.anomalies.some(a => a.severity === 'CRITICA'));
+    const nFalsaPresenca = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FALSA_PRESENCA')).length;
+    const nFugaAula = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FUGA_AULA')).length;
+    const nSaidaSemEntrada = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'SAIDA_SEM_ENTRADA')).length;
+
+    const rows = acessosHoje.map(rec => {
+      const isE = rec.tipo === 'ENTRADA';
+      const tagBg = isE ? '#e3f5ec' : '#e8effb';
+      const tagFg = isE ? '#0e7d52' : '#2155b8';
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="background:${tagBg};color:${tagFg};font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;text-transform:uppercase">${rec.tipo}</span>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--txt)">${esc(rec.nome)}</div>
+              <div style="font-size:12px;color:var(--txt-dim)">${rec.classe} · Turma ${rec.turma} (${rec.cod})</div>
+            </div>
+          </div>
+          <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--txt)">${rec.hora}</div>
+        </div>
+      `;
+    }).join('');
+
+    const tabButtons = `
+      <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" onclick="window._portariaTab='scanner';render()" style="border-radius:12px;padding:9px 18px;font-weight:700;font-size:13px;background:${tab==='scanner'?'var(--brand)':'var(--bg-card)'};color:${tab==='scanner'?'#fff':'var(--txt-soft)'}">
+          📷 Leitor QR & Registos do Dia (${acessosHoje.length})
+        </button>
+        <button class="btn" onclick="window._portariaTab='anomalias';render()" style="border-radius:12px;padding:9px 18px;font-weight:700;font-size:13px;background:${tab==='anomalias'?'#c1121f':'var(--bg-card)'};color:${tab==='anomalias'?'#fff':'var(--txt-soft)'}">
+          🚨 Auditoria & Anomalias (${criticalAnomalies.length} Alertas)
+        </button>
+        <button class="btn" onclick="window._portariaLocked=true;render();if(typeof toast==='function')toast('🔒 Portaria Bloqueada em Modo Quiosque')" style="border-radius:12px;padding:8px 14px;font-weight:700;font-size:12.5px;background:#e3f5ec;color:#0e7d52;border:1.5px solid #0e7d52;margin-left:auto;display:flex;align-items:center;gap:6px" title="Clique para bloquear a Portaria em modo quiosque novamente">
+          <span style="font-size:14px">🔒</span> <span>Bloquear Modo Quiosque</span>
+        </button>
+      </div>
+    `;
+
+    let mainSection = '';
+
+    if (tab === 'scanner') {
+      mainSection = `
+        <!-- STATUS & STATS BANNER -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+          <div class="card" style="flex:2;min-width:260px;background:${autoBg};border:1.5px solid ${autoColor};display:flex;align-items:center;justify-content:space-between;padding:16px 20px">
+            <div>
+              <div style="font-size:11px;font-weight:800;color:${autoColor};text-transform:uppercase;letter-spacing:0.8px">Modo Automático</div>
+              <div style="font-family:var(--serif);font-size:22px;font-weight:800;color:${autoColor};margin-top:2px">
+                ${autoTipo === 'ENTRADA' ? '🟢 Modo ENTRADA (05:00–11:00)' : '🔵 Modo SAÍDA (11:01–18:00)'}
+              </div>
+            </div>
+            <div style="font-size:12px;color:${autoColor};opacity:0.8;text-align:right">
+              Detecção por horário<br>sem toques manuais
+            </div>
+          </div>
+
+          <div class="card" style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:space-around;padding:16px">
+            <div style="text-align:center">
+              <div id="n-entradas-count" style="font-family:var(--serif);font-size:24px;font-weight:800;color:#0e7d52">${nEntradas}</div>
+              <div style="font-size:11px;color:var(--txt-dim);font-weight:700;text-transform:uppercase">Entradas Hoje</div>
+            </div>
+            <div style="width:1px;height:30px;background:var(--line)"></div>
+            <div style="text-align:center">
+              <div id="n-saidas-count" style="font-family:var(--serif);font-size:24px;font-weight:800;color:#2155b8">${nSaidas}</div>
+              <div style="font-size:11px;color:var(--txt-dim);font-weight:700;text-transform:uppercase">Saídas Hoje</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN SCANNER CONTAINER WITH CONTINUOUS LIVE INLINE BANNER -->
+        <div class="card" style="padding:20px;margin-bottom:20px;text-align:center">
+          <div id="scan-banner-container"></div>
+          <div id="qr-reader" style="width:100%;max-width:480px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px dashed var(--line);background:var(--bg-body)"></div>
+          <div style="font-size:12px;color:var(--txt-dim);margin-top:12px">
+            📱 Modo Quiosque Contínuo. Passe os cartões em sequência em frente à fotocamera.
+          </div>
+        </div>
+
+        <!-- TODAY'S LOG -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 18px;background:var(--bg-body);border-bottom:1px solid var(--line);font-size:13px;font-weight:800;color:var(--txt);text-transform:uppercase;letter-spacing:0.5px">
+            📋 Registos de Hoje (${acessosHoje.length})
+          </div>
+          <div id="acessos-rows-list" style="max-height:350px;overflow-y:auto">${rows || '<div class="empty" style="padding:24px;text-align:center;color:var(--txt-dim)">Nenhum registo de acesso hoje.</div>'}</div>
+        </div>
+      `;
+    } else {
+      // AUDITORIA DE ANOMALIAS TAB
+      const currentFilter = window._anomaliaFilter;
+
+      let filteredStuds = anomaliesData;
+      if (currentFilter === 'CRITICA') {
+        filteredStuds = anomaliesData.filter(s => s.anomalies.some(a => a.severity === 'CRITICA'));
+      } else if (currentFilter === 'FALSA_PRESENCA') {
+        filteredStuds = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FALSA_PRESENCA'));
+      } else if (currentFilter === 'FUGA_AULA') {
+        filteredStuds = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'FUGA_AULA'));
+      } else if (currentFilter === 'SAIDA_SEM_ENTRADA') {
+        filteredStuds = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'SAIDA_SEM_ENTRADA'));
+      } else if (currentFilter === 'AUSENTE_NORMAL') {
+        filteredStuds = anomaliesData.filter(s => s.anomalies.some(a => a.type === 'AUSENTE_NORMAL'));
+      }
+
+      const cardsHtml = filteredStuds.map(s => {
+        const mainAnomaly = s.anomalies[0] || { title: '🟢 Situação Regular', desc: 'Presença em conformidade.', bg: '#e3f5ec', fg: '#0e7d52' };
+        const foto = (getAnag(s.cod)||{}).foto || PHOTO_PLACEHOLDER;
+
+        return `
+          <div class="card hover-lift" style="padding:16px 20px;border-radius:16px;margin-bottom:12px;border-left:5px solid ${mainAnomaly.fg}">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <img src="${foto}" style="width:44px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#fff">
+              <div style="flex:1;min-width:200px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                  <span style="font-size:14px;font-weight:800;color:var(--txt)">${esc(s.nome)}</span>
+                  <span style="font-size:11px;font-weight:700;color:var(--txt-dim);background:var(--bg-body);padding:2px 8px;border-radius:6px">${esc(s.classe)} · Turma ${esc(s.turma)}</span>
+                </div>
+                
+                <!-- ANOMALIES BADGES -->
+                <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
+                  ${s.anomalies.map(a => `
+                    <div style="background:${a.bg};color:${a.fg};padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:700">
+                      <div>${a.title}</div>
+                      <div style="font-size:11.5px;font-weight:500;opacity:0.9;margin-top:2px">${a.desc}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- ACTION BUTTON -->
+              <div style="text-align:right">
+                ${s.anomalies.some(a=>a.severity==='CRITICA'||a.severity==='MEDIA') ? `
+                  <button class="btn" onclick="sendWhatsAppAnomaly('${s.cod}', '${esc(mainAnomaly.title)}', '${esc(mainAnomaly.desc)}')" style="background:#25d366;color:#fff;border-radius:10px;padding:8px 14px;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px">
+                    📲 Notificar Pais
+                  </button>
+                ` : `<span style="font-size:11px;color:#0e7d52;font-weight:700">✓ Em conformidade</span>`}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      mainSection = `
+        <!-- ANOMALY SUMMARY DASHBOARD -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:12px;margin-bottom:18px">
+          <div class="card" onclick="window._anomaliaFilter='CRITICA';render()" style="cursor:pointer;padding:14px;background:#fde3e1;border:1.5px solid #a8231b">
+            <div style="font-size:11px;font-weight:800;color:#a8231b;text-transform:uppercase">Anomalias Críticas</div>
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#a8231b;margin-top:2px">${criticalAnomalies.length}</div>
+          </div>
+          <div class="card" onclick="window._anomaliaFilter='FALSA_PRESENCA';render()" style="cursor:pointer;padding:14px;background:#fce7f3;border:1.5px solid #be185d">
+            <div style="font-size:11px;font-weight:800;color:#be185d;text-transform:uppercase">Falsa Presença em Aula</div>
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#be185d;margin-top:2px">${nFalsaPresenca}</div>
+          </div>
+          <div class="card" onclick="window._anomaliaFilter='FUGA_AULA';render()" style="cursor:pointer;padding:14px;background:#fff1d6;border:1.5px solid #8a6a12">
+            <div style="font-size:11px;font-weight:800;color:#8a6a12;text-transform:uppercase">Fuga à Aula</div>
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#8a6a12;margin-top:2px">${nFugaAula}</div>
+          </div>
+          <div class="card" onclick="window._anomaliaFilter='SAIDA_SEM_ENTRADA';render()" style="cursor:pointer;padding:14px;background:#fef9c3;border:1.5px solid #854d0e">
+            <div style="font-size:11px;font-weight:800;color:#854d0e;text-transform:uppercase">Saída sem Entrada</div>
+            <div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#854d0e;margin-top:2px">${nSaidaSemEntrada}</div>
+          </div>
+        </div>
+
+        <!-- FILTER BUTTONS -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn" onclick="window._anomaliaFilter='CRITICA';render()" style="border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;background:${currentFilter==='CRITICA'?'#a8231b':'var(--bg-card)'};color:${currentFilter==='CRITICA'?'#fff':'var(--txt-soft)'}">🚨 Apenas Críticas (${criticalAnomalies.length})</button>
+          <button class="btn" onclick="window._anomaliaFilter='FALSA_PRESENCA';render()" style="border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;background:${currentFilter==='FALSA_PRESENCA'?'#be185d':'var(--bg-card)'};color:${currentFilter==='FALSA_PRESENCA'?'#fff':'var(--txt-soft)'}">🔴 Falsa Presença (${nFalsaPresenca})</button>
+          <button class="btn" onclick="window._anomaliaFilter='FUGA_AULA';render()" style="border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;background:${currentFilter==='FUGA_AULA'?'#8a6a12':'var(--bg-card)'};color:${currentFilter==='FUGA_AULA'?'#fff':'var(--txt-soft)'}">🟠 Fuga à Aula (${nFugaAula})</button>
+          <button class="btn" onclick="window._anomaliaFilter='SAIDA_SEM_ENTRADA';render()" style="border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;background:${currentFilter==='SAIDA_SEM_ENTRADA'?'#854d0e':'var(--bg-card)'};color:${currentFilter==='SAIDA_SEM_ENTRADA'?'#fff':'var(--txt-soft)'}">🟡 Saída sem Entrada (${nSaidaSemEntrada})</button>
+          <button class="btn" onclick="window._anomaliaFilter='TODOS';render()" style="border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;background:${currentFilter==='TODOS'?'var(--brand)':'var(--bg-card)'};color:${currentFilter==='TODOS'?'#fff':'var(--txt-soft)'}">Todos os Alunos (${anomaliesData.length})</button>
+        </div>
+
+        <!-- ANOMALY CARDS LIST -->
+        <div>
+          ${cardsHtml || `<div class="card" style="padding:30px;text-align:center;color:var(--txt-dim)"><div style="font-size:32px;margin-bottom:8px">🎉</div><div style="font-weight:700">Nenhuma anomalia corresponde ao filtro seleccionado.</div></div>`}
+        </div>
+      `;
+    }
+
+    r.innerHTML = `
+      <div class="vhead" style="margin-top:8px">
+        <h1>Portaria & Controlo de Acessos</h1>
+        <p>Cruzamento automático entre registos de portaria e presença em sala de aula.</p>
+      </div>
+
+      ${tabButtons}
+      ${mainSection}
+    `;
+  }enter;gap:12px">
           <span style="background:${tagBg};color:${tagFg};font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;text-transform:uppercase">${rec.tipo}</span>
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--txt)">${esc(rec.nome)}</div>
