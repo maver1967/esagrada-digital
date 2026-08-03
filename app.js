@@ -66,6 +66,26 @@ async function storeLoad(){
 }
 let _lastSyncPullTs = 0;
 let _isSyncing = false;
+let _syncPushDebounceTimer = null;
+let _cloudBackoffUntil = 0;
+let _cloudBackoffDelay = 20000; // 20s initial cooldown on HTTP 429
+
+function isCloudBackoffActive() {
+  return Date.now() < _cloudBackoffUntil;
+}
+
+function handleCloudHttpError(status) {
+  if (status === 429) {
+    _cloudBackoffUntil = Date.now() + _cloudBackoffDelay;
+    const waitSecs = Math.ceil(_cloudBackoffDelay / 1000);
+    _cloudBackoffDelay = Math.min(_cloudBackoffDelay * 1.5, 90000); // up to 90s max backoff
+    setCloudStatus('error', `Pausa 429 (${waitSecs}s)`);
+    return true;
+  } else {
+    setCloudStatus('error', `Erro (${status})`);
+    return false;
+  }
+}
 
 function getCloudSyncUrl() {
   if (typeof DB !== 'undefined' && DB.settings && DB.settings.syncUrl && DB.settings.syncUrl.trim()) {
@@ -118,8 +138,16 @@ function mergeById(localArr = [], remoteArr = [], maxLimit = 2000) {
   return merged.slice(0, maxLimit);
 }
 
-async function syncPush(){
+function scheduleSyncPush(delayMs = 1200) {
+  if (_syncPushDebounceTimer) clearTimeout(_syncPushDebounceTimer);
+  _syncPushDebounceTimer = setTimeout(() => {
+    syncPush();
+  }, delayMs);
+}
+
+async function syncPush(force = false){
   if (!DB) return;
+  if (!force && isCloudBackoffActive()) return;
   if (_isSyncing) {
     _pendingPushRequest = true;
     return;
@@ -130,7 +158,7 @@ async function syncPush(){
   clearTimeout(_syncingTimeoutTimer);
   _syncingTimeoutTimer = setTimeout(() => {
     _isSyncing = false;
-    if (_pendingPushRequest) {
+    if (_pendingPushRequest && !isCloudBackoffActive()) {
       _pendingPushRequest = false;
       syncPush();
     }
@@ -143,7 +171,14 @@ async function syncPush(){
     let remoteData = {};
     try {
       const getRes = await fetch(cloudUrl, { cache: 'no-store' });
-      if (getRes.ok) remoteData = await getRes.json() || {};
+      if (getRes.ok) {
+        remoteData = await getRes.json() || {};
+        _cloudBackoffDelay = 20000;
+        _cloudBackoffUntil = 0;
+      } else if (getRes.status === 429) {
+        handleCloudHttpError(429);
+        return;
+      }
     } catch(e){}
 
     const mergedAcessos = mergeById(DB.acessos || [], remoteData.acessos || [], 2000);
@@ -173,9 +208,11 @@ async function syncPush(){
 
     if (putRes.ok) {
       _lastSyncPullTs = payload.ts;
+      _cloudBackoffDelay = 20000;
+      _cloudBackoffUntil = 0;
       setCloudStatus('ok');
     } else {
-      setCloudStatus('error', 'Falha Servidor (' + putRes.status + ')');
+      handleCloudHttpError(putRes.status);
     }
   } catch(e) {
     console.warn('[CloudSync Push Error]', e);
@@ -183,21 +220,22 @@ async function syncPush(){
   } finally {
     clearTimeout(_syncingTimeoutTimer);
     _isSyncing = false;
-    if (_pendingPushRequest) {
+    if (_pendingPushRequest && !isCloudBackoffActive()) {
       _pendingPushRequest = false;
-      setTimeout(syncPush, 150);
+      setTimeout(syncPush, 1000);
     }
   }
 }
 
-async function syncPull(){
+async function syncPull(force = false){
   if (!DB || _isSyncing) return;
+  if (!force && isCloudBackoffActive()) return;
   _isSyncing = true;
   
   clearTimeout(_syncingTimeoutTimer);
   _syncingTimeoutTimer = setTimeout(() => {
     _isSyncing = false;
-    if (_pendingPushRequest) {
+    if (_pendingPushRequest && !isCloudBackoffActive()) {
       _pendingPushRequest = false;
       syncPush();
     }
@@ -207,14 +245,14 @@ async function syncPull(){
     const cloudUrl = getCloudSyncUrl();
     const res = await fetch(cloudUrl, { cache: 'no-store' });
     if(!res.ok) {
-      setCloudStatus('error', 'Erro (' + res.status + ')');
+      handleCloudHttpError(res.status);
       _isSyncing = false;
-      if (_pendingPushRequest) {
-        _pendingPushRequest = false;
-        setTimeout(syncPush, 100);
-      }
       return;
     }
+
+    _cloudBackoffDelay = 20000;
+    _cloudBackoffUntil = 0;
+
     const remote = await res.json();
     if(!remote || typeof remote !== 'object') {
       setCloudStatus('ok');
@@ -301,20 +339,28 @@ async function syncPull(){
     _isSyncing = false;
     clearTimeout(_syncingTimeoutTimer);
 
-    if (localNeedsPush || _pendingPushRequest) {
+    if ((localNeedsPush || _pendingPushRequest) && !isCloudBackoffActive()) {
       _pendingPushRequest = false;
-      setTimeout(syncPush, 100);
+      setTimeout(syncPush, 500);
     }
   } catch(e) {
     console.warn('[CloudSync Pull Error]', e);
     setCloudStatus('error', 'Sem Ligações');
     _isSyncing = false;
     clearTimeout(_syncingTimeoutTimer);
-    if (_pendingPushRequest) {
+    if (_pendingPushRequest && !isCloudBackoffActive()) {
       _pendingPushRequest = false;
-      setTimeout(syncPush, 500);
+      setTimeout(syncPush, 1000);
     }
   }
+}
+
+async function manualSyncCloud() {
+  _cloudBackoffUntil = 0;
+  _cloudBackoffDelay = 20000;
+  if(typeof toast === 'function') toast('🔄 Sincronizando com a Nuvem...');
+  await syncPull(true);
+  await syncPush(true);
 }
 
 async function testCloudSync() {
@@ -324,8 +370,9 @@ async function testCloudSync() {
     const res = await fetch(url, { cache: 'no-store' });
     if (res.ok) {
       if(typeof toast === 'function') toast('✅ Conexão à Nuvem estabelecida com sucesso!');
-      syncPush();
+      syncPush(true);
     } else {
+      handleCloudHttpError(res.status);
       if(typeof toast === 'function') toast('⚠️ Servidor respondeu com código ' + res.status, true);
     }
   } catch(e) {
@@ -333,14 +380,14 @@ async function testCloudSync() {
   }
 }
 
-setInterval(syncPull, 3000);
+setInterval(syncPull, 12000);
 
 async function persist(){
   setSave('saving');
   const ok=await storeSave(JSON.stringify(DB));
   setSave(ok?'ok':'local');
   scheduleBackup();
-  syncPush();
+  scheduleSyncPush(1200);
 }
 async function loadDB(){
   const v=await storeLoad();
@@ -4973,14 +5020,15 @@ VIEWS.archive=function(r){
    ARRANQUE DA APLICAÇÃO
    ============================================================ */
 function ensureTeacherAssignmentsFix(db){
-  if(!db) return;
+  if(!db) return false;
+  let changed = false;
   const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia'].includes(s.name)).map(s => s.id);
   const itaSubj = (db.subjects || []).find(s => s.name === 'Italiano');
 
   if (Array.isArray(db.assignments)) {
     db.assignments.forEach(a => {
-      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') a.tid = 'p114';
-      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') a.tid = 'p104';
+      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') { a.tid = 'p114'; changed = true; }
+      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') { a.tid = 'p104'; changed = true; }
     });
   }
 
@@ -4995,8 +5043,8 @@ function ensureTeacherAssignmentsFix(db){
           const arr = slots[sid];
           if (Array.isArray(arr)) {
             arr.forEach(entry => {
-              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') entry.tid = 'p114';
-              if (itaSubj && entry.sid === itaSubj.id && entry.tid !== 'p104') entry.tid = 'p104';
+              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') { entry.tid = 'p114'; changed = true; }
+              if (itaSubj && entry.sid === itaSubj.id && entry.tid !== 'p104') { entry.tid = 'p104'; changed = true; }
             });
           }
         });
@@ -5006,10 +5054,17 @@ function ensureTeacherAssignmentsFix(db){
 
   if (Array.isArray(db.teachers)) {
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
-    if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
+    if (maver && maver.disciplinas !== 'Filosofia, Intr. à Filosofia, Ética e Cidadania') {
+      maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
+      changed = true;
+    }
     const fausto = db.teachers.find(t => t.id === 'p104' || (t.name || '').includes('Fausto'));
-    if (fausto) fausto.disciplinas = 'Italiano';
+    if (fausto && fausto.disciplinas !== 'Italiano') {
+      fausto.disciplinas = 'Italiano';
+      changed = true;
+    }
   }
+  return changed;
 }
 
 (async function init(){
@@ -5017,11 +5072,11 @@ function ensureTeacherAssignmentsFix(db){
   DB = (saved && saved.settings && saved.classes && saved.tt) ? saved : seed();
   ensureSchema(DB);
   ensureUsers(DB);
-  ensureTeacherAssignmentsFix(DB);
+  const fixApplied = ensureTeacherAssignmentsFix(DB);
   const seeded=mergeAnagSeed();
   const fseeded=mergeFotosSeed();
   const pseeded=mergeAnagPatch();
-  if(!saved) await persist(); else if(seeded||fseeded||pseeded) await persist();
+  if(!saved) await persist(); else if(seeded||fseeded||pseeded||fixApplied) await persist();
   try{ applyT1Overrides(); }catch(e){}
   await restoreBackupHandle();
 
