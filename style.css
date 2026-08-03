@@ -786,3 +786,51 @@ body.portaria-locked {
   -webkit-user-select: none;
   touch-action: manipulation;
 }
+
+/* ── Garantia de Legibilidade para SAÍDA (Texto Preto / Escuro) ── */
+.saida-bar, .hd-saida, [data-tipo="SAÍDA"], .tag-saida {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* ── Suporte Completo para Rotação do Telemóvel (Modo Horizontal / Landscape) ── */
+@media screen and (orientation: landscape) and (max-height: 600px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas: "top" "main";
+    height: 100dvh;
+  }
+  .topbar {
+    padding: 4px 12px !important;
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .topbar .ttl {
+    font-size: 14px !important;
+  }
+  .main {
+    padding: 8px 10px 40px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vhead {
+    margin-bottom: 8px !important;
+  }
+  .vhead h1 {
+    font-size: 18px !important;
+  }
+  .tt-wrap, .table-wrap, .diario-wrap, .pauta-wrap, .view {
+    max-height: calc(100vh - 90px) !important;
+    overflow: auto !important;
+  }
+  .modal {
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+  #qr-reader {
+    max-height: 220px !important;
+  }
+  .card {
+    padding: 12px 14px !important;
+  }
+}

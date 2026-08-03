@@ -10974,10 +10974,6 @@ function showScanAlreadyRegisteredInline(rec, a, t, an){
           </div>
           <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:#92400e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
           <div style="font-size:12px;color:#b45309">O registo de <b>${rec.tipo}</b> deste aluno já deu entrada anteriormente.</div>
-          <div style="display:flex;gap:6px;margin-top:8px">
-            <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">📲 WhatsApp</button>
-            <button class="btn sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#2563eb;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">💬 SMS</button>
-          </div>
         </div>
       </div>
     `;
@@ -10988,7 +10984,7 @@ function showScanAlreadyRegisteredInline(rec, a, t, an){
 
 function showScanResultInline(rec, a, t, an){
   const isEntrada = rec.tipo === 'ENTRADA';
-  const color = isEntrada ? '#0e7d52' : '#2155b8';
+  const color = isEntrada ? '#0e7d52' : '#000000';
   const bgColor = isEntrada ? '#e3f5ec' : '#e8effb';
   const foto = an.foto || PHOTO_PLACEHOLDER;
   const eCnt = document.getElementById('n-entradas-count');
@@ -11012,12 +11008,8 @@ function showScanResultInline(rec, a, t, an){
           </div>
         </div>
         <div style="text-align:right">
-          <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${color}">${rec.tipo}</span>
+          <span style="font-weight:800;font-size:12px;padding:3px 8px;border-radius:6px;background:${bgColor};color:${isEntrada ? '#0e7d52' : '#000000'}">${rec.tipo}</span>
           <div style="font-size:11px;color:var(--txt-dim);margin-top:2px;font-weight:600">${rec.hora}</div>
-          <div style="display:flex;gap:4px;margin-top:2px;justify-content:flex-end">
-            <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px" title="Notificar encarregado via WhatsApp">📲 WA</button>
-            <button class="btn ghost sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#2563eb;font-size:11px;padding:2px 6px" title="Notificar encarregado via SMS">💬 SMS</button>
-          </div>
         </div>
       </div>
     `;
@@ -11037,10 +11029,6 @@ function showScanResultInline(rec, a, t, an){
           </div>
           <div style="font-family:var(--serif);font-size:18px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome)}</div>
           <div style="font-size:12px;color:var(--txt-dim)">Processo: <b>${rec.cod}</b> · ${rec.classe} ${rec.turma}</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#25d366;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">📲 WhatsApp</button>
-            <button class="btn sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="background:#2563eb;color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer">💬 SMS Encarregado</button>
-          </div>
         </div>
       </div>
     `;
@@ -11239,8 +11227,8 @@ VIEWS.portaria = function(r){
   const tab = window._portariaTab;
 
   const autoTipo = getAutoTipoAcesso();
-  const autoColor = autoTipo === 'ENTRADA' ? '#0e7d52' : '#2155b8';
-  const autoBg = autoTipo === 'ENTRADA' ? '#e3f5ec' : '#e8effb';
+  const autoColor = autoTipo === 'ENTRADA' ? '#0e7d52' : '#000000';
+  const autoBg = autoTipo === 'ENTRADA' ? '#e3f5ec' : '#e2e8f0';
 
   const isLocked = window._portariaLocked !== false;
 
@@ -11255,9 +11243,6 @@ VIEWS.portaria = function(r){
               <div style="font-weight:800;font-size:14px;color:var(--txt)">Portaria · Leitura de Cartão</div>
               <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
                 <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;background:${autoBg};color:${autoColor};text-transform:uppercase">${autoTipo === 'ENTRADA' ? '🟢 ENTRADA' : '🔵 SAÍDA'}</span>
-                <label style="font-size:11px;font-weight:700;color:var(--txt-dim);display:inline-flex;align-items:center;gap:4px;cursor:pointer">
-                  <input type="checkbox" onchange="window._autoWhatsAppPortaria=this.checked" ${window._autoWhatsAppPortaria ? 'checked' : ''}> 📲 Auto WhatsApp
-                </label>
               </div>
             </div>
           </div>
@@ -11292,8 +11277,8 @@ VIEWS.portaria = function(r){
 
     const rows = acessosHoje.map(rec => {
       const isE = rec.tipo === 'ENTRADA';
-      const tagBg = isE ? '#e3f5ec' : '#e8effb';
-      const tagFg = isE ? '#0e7d52' : '#2155b8';
+      const tagBg = isE ? '#e3f5ec' : '#e2e8f0';
+      const tagFg = isE ? '#0e7d52' : '#000000';
       return `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)">
           <div style="display:flex;align-items:center;gap:12px">
@@ -11305,10 +11290,6 @@ VIEWS.portaria = function(r){
           </div>
           <div style="text-align:right">
             <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--txt)">${rec.hora}</div>
-            <div style="display:flex;gap:4px;margin-top:2px;justify-content:flex-end">
-              <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px" title="Notificar encarregado via WhatsApp">📲 WA</button>
-              <button class="btn ghost sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#2563eb;font-size:11px;padding:2px 6px" title="Notificar encarregado via SMS">💬 SMS</button>
-            </div>
           </div>
         </div>
       `;
