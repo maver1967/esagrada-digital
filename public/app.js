@@ -710,8 +710,109 @@ function buildNav(){
   const banner=$('#previewBanner');
   if(banner){ banner.style.display='none'; }
 }
+window._portariaLocked = true;
+window._portariaUnlockTimer = null;
+
+function applyPortariaLockState() {
+  if (typeof UI !== 'undefined' && UI.view === 'portaria' && window._portariaLocked !== false) {
+    window._portariaLocked = true;
+    document.body.classList.add('portaria-locked');
+  } else {
+    document.body.classList.remove('portaria-locked');
+  }
+}
+
+function togglePortariaPassInput(targetView) {
+  let pop = document.getElementById('portaria-pass-popover');
+  if (pop) {
+    closePortariaPassPrompt();
+    return;
+  }
+
+  pop = document.createElement('div');
+  pop.id = 'portaria-pass-popover';
+  pop.setAttribute('style', 'position:fixed;top:14px;right:16px;z-index:999999;background:var(--bg-card,#ffffff);border:2px solid var(--brand,#0e7d52);padding:12px 16px;border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;animation:fadeIn 0.2s ease');
+
+  let count = 5;
+  pop.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:16px">🔒</span>
+      <div style="font-size:12px;font-weight:800;color:var(--txt)">
+        Senha (<span id="portaria-timer-num" style="color:#c1121f;font-weight:800">${count}</span>s):
+      </div>
+    </div>
+    <input type="password" id="portaria-pass-input" placeholder="Digite..." autofocus style="width:110px;padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')checkPortariaPass('${targetView || ''}')">
+    <button class="btn-brand" onclick="checkPortariaPass('${targetView || ''}')" style="padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700">OK</button>
+  `;
+
+  document.body.appendChild(pop);
+
+  setTimeout(() => {
+    const inp = document.getElementById('portaria-pass-input');
+    if (inp) inp.focus();
+  }, 50);
+
+  if (window._portariaUnlockTimer) clearInterval(window._portariaUnlockTimer);
+
+  window._portariaUnlockTimer = setInterval(() => {
+    count--;
+    const numEl = document.getElementById('portaria-timer-num');
+    if (numEl) numEl.textContent = count;
+    if (count <= 0) {
+      closePortariaPassPrompt();
+    }
+  }, 1000);
+}
+
+function closePortariaPassPrompt() {
+  if (window._portariaUnlockTimer) {
+    clearInterval(window._portariaUnlockTimer);
+    window._portariaUnlockTimer = null;
+  }
+  const pop = document.getElementById('portaria-pass-popover');
+  if (pop) pop.remove();
+}
+
+function checkPortariaPass(targetView) {
+  const inp = document.getElementById('portaria-pass-input');
+  if (!inp) return;
+  const val = String(inp.value || '').trim();
+
+  const validPasses = ['1234'];
+  if (typeof AUTH_USER !== 'undefined' && AUTH_USER && AUTH_USER.pass) {
+    validPasses.push(String(AUTH_USER.pass).trim());
+  }
+  if (typeof DB !== 'undefined' && DB && Array.isArray(DB.users)) {
+    DB.users.forEach(u => { if (u.pass) validPasses.push(String(u.pass).trim()); });
+  }
+
+  if (validPasses.includes(val)) {
+    closePortariaPassPrompt();
+    window._portariaLocked = false;
+    document.body.classList.remove('portaria-locked');
+    if (typeof toast === 'function') toast('🔓 Portaria desbloqueada!');
+    if (targetView && targetView !== 'portaria') {
+      go(targetView);
+    } else if (typeof UI !== 'undefined' && UI.view === 'portaria') {
+      render();
+    }
+  } else {
+    if (typeof toast === 'function') toast('❌ Palavra-passe incorreta!');
+    inp.value = '';
+    inp.focus();
+  }
+}
+
 const VIEWS={};
 function go(v){
+  if (typeof UI !== 'undefined' && UI.view === 'portaria' && window._portariaLocked !== false && v !== 'portaria') {
+    if (typeof toast === 'function') toast('🔒 Modo Portaria Bloqueado! Insira a palavra-passe para sair.');
+    togglePortariaPassInput(v);
+    return;
+  }
+  if (v !== 'portaria') {
+    document.body.classList.remove('portaria-locked');
+  }
   UI.view=v;
   try {
     const g=groupOfView(v);
@@ -10800,6 +10901,7 @@ function sendWhatsAppAnomaly(cod, title, desc) {
 VIEWS.portaria = function(r){
   setSub('Controlo de Acessos & Auditoria de Presença');
   ensureAcessos();
+  applyPortariaLockState();
 
   if (!window._portariaTab) window._portariaTab = 'scanner';
   if (!window._anomaliaFilter) window._anomaliaFilter = 'CRITICA';
@@ -10837,14 +10939,24 @@ VIEWS.portaria = function(r){
     `;
   }).join('');
 
+  const isLocked = window._portariaLocked !== false;
   const tabButtons = `
-    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:10px">
+    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:10px;align-items:center;flex-wrap:wrap">
       <button class="btn" onclick="window._portariaTab='scanner';render()" style="border-radius:12px;padding:9px 18px;font-weight:700;font-size:13px;background:${tab==='scanner'?'var(--brand)':'var(--bg-card)'};color:${tab==='scanner'?'#fff':'var(--txt-soft)'}">
         📷 Leitor QR & Registos do Dia (${acessosHoje.length})
       </button>
       <button class="btn" onclick="window._portariaTab='anomalias';render()" style="border-radius:12px;padding:9px 18px;font-weight:700;font-size:13px;background:${tab==='anomalias'?'#c1121f':'var(--bg-card)'};color:${tab==='anomalias'?'#fff':'var(--txt-soft)'}">
         🚨 Auditoria & Anomalias (${criticalAnomalies.length} Alertas)
       </button>
+      ${isLocked ? `
+        <button class="btn" onclick="togglePortariaPassInput('dash')" style="border-radius:12px;padding:8px 14px;font-weight:700;font-size:12.5px;background:var(--bg-card);color:var(--txt-soft);border:1.5px solid var(--line);margin-left:auto;display:flex;align-items:center;gap:6px" title="Modo Alunos / Quiosque Bloqueado. Clique para inserir a palavra-passe e sair">
+          <span style="font-size:14px">🔒</span> <span>Sair da Portaria</span>
+        </button>
+      ` : `
+        <button class="btn" onclick="window._portariaLocked=true;render();if(typeof toast==='function')toast('🔒 Portaria Bloqueada em Modo Quiosque')" style="border-radius:12px;padding:8px 14px;font-weight:700;font-size:12.5px;background:#e3f5ec;color:#0e7d52;border:1.5px solid #0e7d52;margin-left:auto;display:flex;align-items:center;gap:6px" title="Clique para bloquear a Portaria em modo quiosque novamente">
+          <span style="font-size:14px">🔓</span> <span>Bloquear Portaria</span>
+        </button>
+      `}
     </div>
   `;
 
