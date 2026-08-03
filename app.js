@@ -65,21 +65,66 @@ async function storeLoad(){
   return null;
 }
 let _lastSyncPullTs = 0;
+let _isSyncing = false;
+
+function getCloudSyncUrl() {
+  if (typeof DB !== 'undefined' && DB.settings && DB.settings.syncUrl) {
+    return DB.settings.syncUrl;
+  }
+  return 'https://esagrada-digital-default-rtdb.firebaseio.com/sync.json';
+}
+
+function setCloudStatus(st) {
+  window._cloudStatus = st;
+  const els = document.querySelectorAll('.cloud-sync-badge');
+  els.forEach(el => {
+    if (st === 'ok') {
+      el.style.background = '#e3f5ec';
+      el.style.color = '#0e7d52';
+      el.innerHTML = '☁️ Nuvem Sincronizada';
+    } else if (st === 'syncing') {
+      el.style.background = '#e8effb';
+      el.style.color = '#2155b8';
+      el.innerHTML = '⚡ Sincronizando...';
+    } else {
+      el.style.background = '#fff3cd';
+      el.style.color = '#856404';
+      el.innerHTML = '☁️ Sincronização Pendente';
+    }
+  });
+}
 
 async function syncPush(){
   try {
-    if(!DB) return;
-    await fetch('/api/sync', {
-      method: 'POST',
+    if(!DB || _isSyncing) return;
+    _isSyncing = true;
+    setCloudStatus('syncing');
+    const cloudUrl = getCloudSyncUrl();
+    const payload = {
+      acessos: (DB.acessos || []).slice(0, 2000),
+      avisos: (DB.avisos || []).slice(0, 500),
+      deletedAvisos: DB.deletedAvisos || [],
+      ts: Date.now()
+    };
+    await fetch(cloudUrl, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acessos: DB.acessos||[], avisos: DB.avisos||[], deletedAvisos: DB.deletedAvisos||[], ts: Date.now() })
+      body: JSON.stringify(payload)
     });
-  } catch(e){}
+    _lastSyncPullTs = payload.ts;
+    setCloudStatus('ok');
+  } catch(e) {
+    console.warn('[CloudSync Push Error]', e);
+    setCloudStatus('error');
+  } finally {
+    _isSyncing = false;
+  }
 }
 
 async function syncPull(){
   try {
-    const res = await fetch('/api/sync');
+    const cloudUrl = getCloudSyncUrl();
+    const res = await fetch(cloudUrl, { cache: 'no-store' });
     if(!res.ok) return;
     const remote = await res.json();
     if(!remote || !remote.ts || remote.ts <= _lastSyncPullTs) return;
@@ -127,12 +172,15 @@ async function syncPull(){
     
     if(updated){
       await storeSave(JSON.stringify(DB));
-      if(UI.view === 'portaria' || UI.view === 'avisos' || UI.view === 'dash') render();
+      setCloudStatus('ok');
+      if(['portaria', 'avisos', 'dash', 'mura', 'analise'].includes(UI.view)) render();
     }
-  } catch(e){}
+  } catch(e){
+    console.warn('[CloudSync Pull Error]', e);
+  }
 }
 
-setInterval(syncPull, 1800);
+setInterval(syncPull, 2000);
 
 async function persist(){
   setSave('saving');
@@ -11050,7 +11098,13 @@ VIEWS.portaria = function(r){
               <div style="font-size:12px;color:var(--txt-dim)">${rec.classe} · Turma ${rec.turma} (${rec.cod})</div>
             </div>
           </div>
-          <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--txt)">${rec.hora}</div>
+          <div style="text-align:right">
+            <div style="font-family:var(--serif);font-weight:700;font-size:15px;color:var(--txt)">${rec.hora}</div>
+            <div style="display:flex;gap:4px;margin-top:2px;justify-content:flex-end">
+              <button class="btn ghost sm" onclick="sendWhatsAppAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#25d366;font-size:11px;padding:2px 6px" title="Notificar encarregado via WhatsApp">📲 WA</button>
+              <button class="btn ghost sm" onclick="sendSMSAcesso('${rec.cod}','${rec.tipo}','${rec.hora}','${rec.data}')" style="color:#2563eb;font-size:11px;padding:2px 6px" title="Notificar encarregado via SMS">💬 SMS</button>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
@@ -11063,9 +11117,18 @@ VIEWS.portaria = function(r){
         <button class="btn" onclick="window._portariaTab='anomalias';render()" style="border-radius:12px;padding:9px 18px;font-weight:700;font-size:13px;background:${tab==='anomalias'?'#c1121f':'var(--bg-card)'};color:${tab==='anomalias'?'#fff':'var(--txt-soft)'}">
           🚨 Auditoria & Anomalias (${criticalAnomalies.length} Alertas)
         </button>
-        <button class="btn" onclick="window._portariaLocked=true;render();if(typeof toast==='function')toast('🔒 Portaria Bloqueada em Modo Quiosque')" style="border-radius:12px;padding:8px 14px;font-weight:700;font-size:12.5px;background:#e3f5ec;color:#0e7d52;border:1.5px solid #0e7d52;margin-left:auto;display:flex;align-items:center;gap:6px" title="Clique para bloquear a Portaria em modo quiosque novamente">
-          <span style="font-size:14px">🔒</span> <span>Bloquear Modo Quiosque</span>
-        </button>
+
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="cloud-sync-badge" style="padding:6px 12px;border-radius:12px;font-size:12px;font-weight:700;background:#e3f5ec;color:#0e7d52;display:inline-flex;align-items:center;gap:6px" title="Sincronização em tempo real com a Nuvem">
+            ☁️ Nuvem Sincronizada
+          </div>
+          <button class="btn ghost sm" onclick="syncPush();syncPull();if(typeof toast==='function')toast('🔄 Sincronizando com a Nuvem...')" style="border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px">
+            🔄 Sincronizar Agora
+          </button>
+          <button class="btn" onclick="window._portariaLocked=true;render();if(typeof toast==='function')toast('🔒 Portaria Bloqueada em Modo Quiosque')" style="border-radius:12px;padding:8px 14px;font-weight:700;font-size:12.5px;background:#e3f5ec;color:#0e7d52;border:1.5px solid #0e7d52;display:flex;align-items:center;gap:6px" title="Clique para bloquear a Portaria em modo quiosque novamente">
+            <span style="font-size:14px">🔒</span> <span>Bloquear Modo Quiosque</span>
+          </button>
+        </div>
       </div>
     `;
 
