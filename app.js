@@ -3996,7 +3996,12 @@ window.handleLoginFormSubmit = function(e) {
   const app = $('#app');
   if (app) app.style.display = '';
   buildNav();
-  go('dash');
+  if (res.user && (res.user.role === 'portaria' || res.user.id === 'portaria')) {
+    window._portariaLocked = true;
+    go('portaria');
+  } else {
+    go('dash');
+  }
   toast('Bem-vindo, ' + res.user.nome + '! ✓');
 };
 
@@ -7186,6 +7191,7 @@ const ROLES = {
   secretaria:{label:'Secretaria',        icon:'idcard',   desc:'Anagrafe de alunos e encarregados, matrículas, emissão de documentos.'},
   aluno:     {label:'Aluno',             icon:'students', desc:'Vê o seu horário, as suas notas e a sua situação escolar.'},
   encarregado:{label:'Encarregado',      icon:'user',     desc:'Vê o horário, as notas e as faltas do seu educando.'},
+  portaria:   {label:'Portaria & Acessos',icon:'idcard',   desc:'Leitor QR e controlo de presenças na portaria em Modo Quiosque.'},
 };
 /* Quais voci do menu cada perfil vê. '*' = todas. */
 const ROLE_NAV = {
@@ -7195,6 +7201,7 @@ const ROLE_NAV = {
   secretaria:['anag','teachers','cta','classes','trimestres','calendario','financa','docs','archive','arqanos','avisos'],
   aluno:     ['salaVirtual','mural','grid','alunos'],
   encarregado:['dash','mural','grid','alunos','financa'],
+  portaria:  ['portaria'],
 };
 /* Rótulos adaptados ao perfil (o mesmo ecrã chama-se diferente conforme quem entra) */
 const ROLE_RELABEL = {
