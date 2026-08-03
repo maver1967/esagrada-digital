@@ -11052,6 +11052,11 @@ function sendSMSAcesso(cod, tipo, hora, dataIso) {
 VIEWS.portaria = function(r){
   setSub('Controlo de Acessos & Auditoria de Presença');
   ensureAcessos();
+
+  const isDirecao = (typeof AUTH_USER !== 'undefined' && AUTH_USER && (AUTH_USER.role === 'direcao' || AUTH_USER.id === 'direcao')) || (typeof PREVIEW_ROLE !== 'undefined' && PREVIEW_ROLE === 'direcao');
+  if (isDirecao) {
+    window._portariaLocked = false;
+  }
   applyPortariaLockState();
 
   if (!window._portariaTab) window._portariaTab = 'scanner';
@@ -11189,13 +11194,34 @@ VIEWS.portaria = function(r){
         </div>
 
         <!-- MAIN SCANNER CONTAINER WITH CONTINUOUS LIVE INLINE BANNER -->
-        <div class="card" style="padding:20px;margin-bottom:20px;text-align:center">
-          <div id="scan-banner-container"></div>
-          <div id="qr-reader" style="width:100%;max-width:480px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px dashed var(--line);background:var(--bg-body)"></div>
-          <div style="font-size:12px;color:var(--txt-dim);margin-top:12px">
-            📱 Modo Quiosque Contínuo. Passe os cartões em sequência em frente à fotocamera.
+        ${(!isDirecao || window._direcaoCameraRequested) ? `
+          <div class="card" style="padding:20px;margin-bottom:20px;text-align:center">
+            <div id="scan-banner-container"></div>
+            ${isDirecao ? `
+              <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+                <button class="btn ghost sm" onclick="window._direcaoCameraRequested=false;render();" style="font-size:12px;color:var(--txt-dim);padding:4px 10px;border-radius:8px">⏸️ Pausar Câmara</button>
+              </div>
+            ` : ''}
+            <div id="qr-reader" style="width:100%;max-width:480px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px dashed var(--line);background:var(--bg-body)"></div>
+            <div style="font-size:12px;color:var(--txt-dim);margin-top:12px">
+              📱 Modo Quiosque Contínuo. Passe os cartões em sequência em frente à fotocamera.
+            </div>
           </div>
-        </div>
+        ` : `
+          <div class="card" style="padding:24px;margin-bottom:20px;text-align:center;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,0.06)">
+            <div id="scan-banner-container"></div>
+            <div style="background:var(--bg-body);border:1.5px dashed var(--line);padding:24px 16px;border-radius:16px;margin:0 auto;max-width:480px">
+              <div style="font-size:36px;margin-bottom:8px">📷</div>
+              <div style="font-weight:800;font-size:15.5px;color:var(--txt);margin-bottom:6px">Câmara Desativada (Perfil Direção)</div>
+              <div style="font-size:12.5px;color:var(--txt-dim);max-width:380px;margin:0 auto 16px;line-height:1.45">
+                No perfil de Direção, a câmara não é ativada automaticamente para poupar recursos e bateria. Se desejar efetuar lecturas de cartões QR nesta sessão, clique no botão abaixo.
+              </div>
+              <button class="btn prm" onclick="window._direcaoCameraRequested=true;render()" style="border-radius:12px;padding:10px 22px;font-weight:700;font-size:13.5px;display:inline-flex;align-items:center;gap:8px">
+                <span style="font-size:16px">📷</span> <span>Ativar Câmara para Scansionar</span>
+              </button>
+            </div>
+          </div>
+        `}
 
         <!-- TODAY'S LOG -->
         <div class="card" style="padding:0;overflow:hidden">
@@ -11317,6 +11343,10 @@ VIEWS.portaria = function(r){
         }
         const qrContainer = document.getElementById('qr-reader');
         if(!qrContainer) return;
+
+        const isDirecao = (typeof AUTH_USER !== 'undefined' && AUTH_USER && (AUTH_USER.role === 'direcao' || AUTH_USER.id === 'direcao')) || (typeof PREVIEW_ROLE !== 'undefined' && PREVIEW_ROLE === 'direcao');
+        if (isDirecao && !window._direcaoCameraRequested) return;
+
         qrContainer.innerHTML = '';
 
         const inst = new Html5Qrcode("qr-reader");
