@@ -68,13 +68,13 @@ let _lastSyncPullTs = 0;
 let _isSyncing = false;
 
 function getCloudSyncUrl() {
-  if (typeof DB !== 'undefined' && DB.settings && DB.settings.syncUrl) {
-    return DB.settings.syncUrl;
+  if (typeof DB !== 'undefined' && DB.settings && DB.settings.syncUrl && DB.settings.syncUrl.trim()) {
+    return DB.settings.syncUrl.trim();
   }
-  return 'https://esagrada-digital-default-rtdb.firebaseio.com/sync.json';
+  return 'https://jsonblob.com/api/jsonBlob/019fc7b0-c91d-780a-ac37-6f48d6a840ec';
 }
 
-function setCloudStatus(st) {
+function setCloudStatus(st, msg) {
   window._cloudStatus = st;
   const els = document.querySelectorAll('.cloud-sync-badge');
   els.forEach(el => {
@@ -82,14 +82,17 @@ function setCloudStatus(st) {
       el.style.background = '#e3f5ec';
       el.style.color = '#0e7d52';
       el.innerHTML = '☁️ Nuvem Sincronizada';
+      el.title = 'Sincronização em tempo real ativa';
     } else if (st === 'syncing') {
       el.style.background = '#e8effb';
       el.style.color = '#2155b8';
       el.innerHTML = '⚡ Sincronizando...';
+      el.title = 'Enviando/recebendo dados com a nuvem';
     } else {
       el.style.background = '#fff3cd';
       el.style.color = '#856404';
-      el.innerHTML = '☁️ Sincronização Pendente';
+      el.innerHTML = msg ? `☁️ ${msg}` : '☁️ Erro na Sincronização';
+      el.title = msg || 'Não foi possível ligar ao servidor de sincronização';
     }
   });
 }
@@ -100,10 +103,10 @@ let _pendingPushRequest = false;
 function mergeById(localArr = [], remoteArr = [], maxLimit = 2000) {
   const map = new Map();
   (remoteArr || []).forEach(item => {
-    if (item && item.id) map.set(String(item.id), item);
+    if (item && item.id != null) map.set(String(item.id), item);
   });
   (localArr || []).forEach(item => {
-    if (item && item.id) {
+    if (item && item.id != null) {
       const existing = map.get(String(item.id));
       if (!existing || (item.ts && existing.ts && item.ts >= existing.ts)) {
         map.set(String(item.id), item);
@@ -125,7 +128,13 @@ async function syncPush(){
   _pendingPushRequest = false;
   
   clearTimeout(_syncingTimeoutTimer);
-  _syncingTimeoutTimer = setTimeout(() => { _isSyncing = false; }, 8000);
+  _syncingTimeoutTimer = setTimeout(() => {
+    _isSyncing = false;
+    if (_pendingPushRequest) {
+      _pendingPushRequest = false;
+      syncPush();
+    }
+  }, 8000);
 
   try {
     setCloudStatus('syncing');
@@ -141,7 +150,7 @@ async function syncPush(){
     const mergedDiario  = mergeById(DB.diario || [], remoteData.diario || [], 1000);
     const mergedAvisos  = mergeById(DB.avisos || [], remoteData.avisos || [], 500);
 
-    if (mergedAcessos.length !== (DB.acessos || []).length || mergedDiario.length !== (DB.diario || []).length) {
+    if (mergedAcessos.length !== (DB.acessos || []).length || mergedDiario.length !== (DB.diario || []).length || mergedAvisos.length !== (DB.avisos || []).length) {
       DB.acessos = mergedAcessos;
       DB.diario = mergedDiario;
       DB.avisos = mergedAvisos;
@@ -166,11 +175,11 @@ async function syncPush(){
       _lastSyncPullTs = payload.ts;
       setCloudStatus('ok');
     } else {
-      setCloudStatus('error');
+      setCloudStatus('error', 'Falha Servidor (' + putRes.status + ')');
     }
   } catch(e) {
     console.warn('[CloudSync Push Error]', e);
-    setCloudStatus('error');
+    setCloudStatus('error', 'Sem Redes');
   } finally {
     clearTimeout(_syncingTimeoutTimer);
     _isSyncing = false;
@@ -186,17 +195,29 @@ async function syncPull(){
   _isSyncing = true;
   
   clearTimeout(_syncingTimeoutTimer);
-  _syncingTimeoutTimer = setTimeout(() => { _isSyncing = false; }, 8000);
+  _syncingTimeoutTimer = setTimeout(() => {
+    _isSyncing = false;
+    if (_pendingPushRequest) {
+      _pendingPushRequest = false;
+      syncPush();
+    }
+  }, 8000);
 
   try {
     const cloudUrl = getCloudSyncUrl();
     const res = await fetch(cloudUrl, { cache: 'no-store' });
     if(!res.ok) {
+      setCloudStatus('error', 'Erro (' + res.status + ')');
       _isSyncing = false;
+      if (_pendingPushRequest) {
+        _pendingPushRequest = false;
+        setTimeout(syncPush, 100);
+      }
       return;
     }
     const remote = await res.json();
-    if(!remote) {
+    if(!remote || typeof remote !== 'object') {
+      setCloudStatus('ok');
       _isSyncing = false;
       return;
     }
@@ -210,7 +231,7 @@ async function syncPull(){
       const remoteMap = new Map(remote.acessos.map(x => [String(x.id), x]));
 
       remote.acessos.forEach(rem => {
-        if (!localMap.has(String(rem.id))) {
+        if (rem && rem.id != null && !localMap.has(String(rem.id))) {
           DB.acessos.unshift(rem);
           localMap.set(String(rem.id), rem);
           localUpdated = true;
@@ -218,7 +239,7 @@ async function syncPull(){
       });
 
       DB.acessos.forEach(loc => {
-        if (!remoteMap.has(String(loc.id))) {
+        if (loc && loc.id != null && !remoteMap.has(String(loc.id))) {
           localNeedsPush = true;
         }
       });
@@ -230,7 +251,7 @@ async function syncPull(){
       const remoteDiarioMap = new Map(remote.diario.map(x => [String(x.id), x]));
 
       remote.diario.forEach(rem => {
-        if (!localDiarioMap.has(String(rem.id))) {
+        if (rem && rem.id != null && !localDiarioMap.has(String(rem.id))) {
           DB.diario.unshift(rem);
           localDiarioMap.set(String(rem.id), rem);
           localUpdated = true;
@@ -238,7 +259,7 @@ async function syncPull(){
       });
 
       DB.diario.forEach(loc => {
-        if (!remoteDiarioMap.has(String(loc.id))) {
+        if (loc && loc.id != null && !remoteDiarioMap.has(String(loc.id))) {
           localNeedsPush = true;
         }
       });
@@ -250,7 +271,7 @@ async function syncPull(){
       const remoteAvMap = new Map(remote.avisos.map(x => [String(x.id), x]));
 
       remote.avisos.forEach(rem => {
-        if (!localAvMap.has(String(rem.id))) {
+        if (rem && rem.id != null && !localAvMap.has(String(rem.id))) {
           DB.avisos.unshift(rem);
           localAvMap.set(String(rem.id), rem);
           localUpdated = true;
@@ -258,7 +279,7 @@ async function syncPull(){
       });
 
       DB.avisos.forEach(loc => {
-        if (!remoteAvMap.has(String(loc.id))) {
+        if (loc && loc.id != null && !remoteAvMap.has(String(loc.id))) {
           localNeedsPush = true;
         }
       });
@@ -270,7 +291,7 @@ async function syncPull(){
       DB.acessos.sort((a,b) => (b.ts || 0) - (a.ts || 0));
       await storeSave(JSON.stringify(DB));
       setCloudStatus('ok');
-      if (['portaria', 'avisos', 'dash', 'mura', 'analise', 'diario'].includes(UI.view)) {
+      if (['portaria', 'avisos', 'dash', 'mural', 'analise', 'diario'].includes(UI.view)) {
         render();
       }
     } else {
@@ -280,14 +301,35 @@ async function syncPull(){
     _isSyncing = false;
     clearTimeout(_syncingTimeoutTimer);
 
-    if (localNeedsPush) {
+    if (localNeedsPush || _pendingPushRequest) {
+      _pendingPushRequest = false;
       setTimeout(syncPush, 100);
     }
   } catch(e) {
     console.warn('[CloudSync Pull Error]', e);
-    setCloudStatus('error');
+    setCloudStatus('error', 'Sem Ligações');
     _isSyncing = false;
     clearTimeout(_syncingTimeoutTimer);
+    if (_pendingPushRequest) {
+      _pendingPushRequest = false;
+      setTimeout(syncPush, 500);
+    }
+  }
+}
+
+async function testCloudSync() {
+  const url = getCloudSyncUrl();
+  try {
+    if(typeof toast === 'function') toast('🔄 A testar conexão com a nuvem...');
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      if(typeof toast === 'function') toast('✅ Conexão à Nuvem estabelecida com sucesso!');
+      syncPush();
+    } else {
+      if(typeof toast === 'function') toast('⚠️ Servidor respondeu com código ' + res.status, true);
+    }
+  } catch(e) {
+    if(typeof toast === 'function') toast('❌ Erro de rede ao conectar com a Nuvem: ' + e.message, true);
   }
 }
 
