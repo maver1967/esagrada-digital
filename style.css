@@ -765,3 +765,14 @@ table.hd-grid tr.brk td{background:#fbfbfc;text-align:center;font-size:7.5px;fon
   color: #cbd5e1 !important;
   font-weight: 600;
 }
+
+/* Portaria Kiosk Lock Mode */
+body.portaria-locked aside.side {
+  display: none !important;
+}
+body.portaria-locked header.topbar button.navtoggle {
+  display: none !important;
+}
+body.portaria-locked .topbar {
+  padding-left: 18px !important;
+}
