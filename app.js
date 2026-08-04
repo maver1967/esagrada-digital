@@ -5060,8 +5060,12 @@ function ensureTeacherAssignmentsFix(db){
 
   if (Array.isArray(db.assignments)) {
     db.assignments.forEach(a => {
-      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') { a.tid = 'p114'; changed = true; }
-      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') { a.tid = 'p104'; changed = true; }
+      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') {
+        a.tid = 'p114'; changed = true;
+      }
+      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') {
+        a.tid = 'p104'; changed = true;
+      }
     });
   }
 
