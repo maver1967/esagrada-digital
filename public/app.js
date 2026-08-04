@@ -3578,16 +3578,57 @@ function editCell(cid,day,sid){
 /* ============================================================
    VISTA PROFESSORES (derived)
    ============================================================ */
+const DAY_MAP = {
+  'SEGUNDA': 'seg', 'TERÇA': 'ter', 'QUARTA': 'qua', 'QUINTA': 'qui', 'SEXTA': 'sex', 'SÁBADO': 'sab', 'DOMINGO': 'dom',
+  'seg': 'SEGUNDA', 'ter': 'TERÇA', 'qua': 'QUARTA', 'qui': 'QUINTA', 'sex': 'SEXTA', 'sab': 'SÁBADO', 'dom': 'DOMINGO'
+};
+
+function getSchedDay(sched, dia){
+  if(!sched || !dia) return {};
+  if(sched[dia]) return sched[dia];
+  const alt = DAY_MAP[dia];
+  if(alt && sched[alt]) return sched[alt];
+  const matchKey = Object.keys(sched).find(k => k.toLowerCase().startsWith(String(dia).toLowerCase().slice(0, 3)));
+  return matchKey ? sched[matchKey] : {};
+}
+
 function teacherSchedule(tid){
-  const sched={}; DAYS.forEach(d=>{sched[d]={};});
-  DB.classes.forEach(c=>DAYS.forEach(d=>allSlots().forEach(s=>{
-    const arr=DB.tt[c.id]?.[d]?.[s.id]; if(!arr)return;
-    arr.forEach(e=>{ if(e.tid!==tid)return;
-      const list=sched[d][s.id]=sched[d][s.id]||[];
-      if(DB.settings.expandGroups && c.type==='mista' && !e.grp){ c.groups.forEach(g=>list.push({name:entryName(e),cls:c.name,grp:g,col:entryColor(e)})); }
-      else list.push({name:entryName(e),cls:c.name,grp:e.grp,col:entryColor(e)});
+  const sched={};
+  DAYS.forEach(d=>{
+    sched[d]={};
+    const sk = DAY_MAP[d];
+    if(sk) sched[sk] = sched[d];
+  });
+  const tObj = typeof getTeacher === 'function' ? getTeacher(tid) : null;
+  const tNameNorm = tObj ? norm(teacherLabel(tObj)) : '';
+
+  (DB.classes || []).forEach(c => DAYS.forEach(d => {
+    const dayGrid = DB.tt[c.id]?.[d];
+    if(!dayGrid) return;
+    allSlots().forEach(s => {
+      const arr = dayGrid[s.id]; if(!arr || !arr.length) return;
+      arr.forEach(e => {
+        let isMatch = (e.tid === tid);
+        if(!isMatch && tid) {
+          if (!e.tid && e.sid) {
+            const asg = (DB.assignments||[]).find(a => (a.cid === c.id || a.cid === c.name) && a.sid === e.sid);
+            if (asg && asg.tid === tid) isMatch = true;
+          }
+          if (!isMatch) {
+            const pName = typeof profOf === 'function' ? profOf(c.name, entryName(e)) : '';
+            if (pName && tNameNorm && (norm(pName).includes(tNameNorm) || tNameNorm.includes(norm(pName)))) isMatch = true;
+          }
+        }
+        if(!isMatch) return;
+        const list = sched[d][s.id] = sched[d][s.id] || [];
+        if(DB.settings.expandGroups && c.type==='mista' && !e.grp){
+          c.groups.forEach(g=>list.push({name:entryName(e),cls:c.name,grp:g,col:entryColor(e),slotId:s.id}));
+        } else {
+          list.push({name:entryName(e),cls:c.name,grp:e.grp,col:entryColor(e),slotId:s.id});
+        }
+      });
     });
-  })));
+  }));
   return sched;
 }
 
