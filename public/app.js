@@ -5054,17 +5054,20 @@ VIEWS.archive=function(r){
    ============================================================ */
 function ensureTeacherAssignmentsFix(db){
   if(!db) return false;
-  let changed = false;
+  let modified = false;
   const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia'].includes(s.name)).map(s => s.id);
   const itaSubj = (db.subjects || []).find(s => s.name === 'Italiano');
+  const itaSubjId = itaSubj ? itaSubj.id : null;
 
   if (Array.isArray(db.assignments)) {
     db.assignments.forEach(a => {
       if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') {
-        a.tid = 'p114'; changed = true;
+        a.tid = 'p114';
+        modified = true;
       }
-      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') {
-        a.tid = 'p104'; changed = true;
+      if (itaSubjId && a.sid === itaSubjId && a.tid !== 'p104') {
+        a.tid = 'p104';
+        modified = true;
       }
     });
   }
@@ -5080,8 +5083,14 @@ function ensureTeacherAssignmentsFix(db){
           const arr = slots[sid];
           if (Array.isArray(arr)) {
             arr.forEach(entry => {
-              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') { entry.tid = 'p114'; changed = true; }
-              if (itaSubj && entry.sid === itaSubj.id && entry.tid !== 'p104') { entry.tid = 'p104'; changed = true; }
+              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') {
+                entry.tid = 'p114';
+                modified = true;
+              }
+              if (itaSubjId && entry.sid === itaSubjId && entry.tid !== 'p104') {
+                entry.tid = 'p104';
+                modified = true;
+              }
             });
           }
         });
@@ -5093,15 +5102,16 @@ function ensureTeacherAssignmentsFix(db){
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
     if (maver && maver.disciplinas !== 'Filosofia, Intr. à Filosofia, Ética e Cidadania') {
       maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
-      changed = true;
+      modified = true;
     }
     const fausto = db.teachers.find(t => t.id === 'p104' || (t.name || '').includes('Fausto'));
     if (fausto && fausto.disciplinas !== 'Italiano') {
       fausto.disciplinas = 'Italiano';
-      changed = true;
+      modified = true;
     }
   }
-  return changed;
+
+  return modified;
 }
 
 (async function init(){
