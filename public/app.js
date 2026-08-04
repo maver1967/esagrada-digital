@@ -484,7 +484,7 @@ function seed(){
 
   // ── Disciplinas (código → nome, categoria, professor) ──
   const DISC={
-    PT:['Português','tc',101], ING:['Inglês','tc',102], FIL:['Filosofia','tc',104],
+    PT:['Português','tc',101], ING:['Inglês','tc',102], FIL:['Filosofia','tc',114],
     IFIC:['Intr. à Filosofia','tc',114], MAT:['Matemática','tc',105], TICS:["TIC's",'tc',113],
     EDF:['Educação Física','tc',109], RET:['Reunião de Turma','tc',null],
     FRA:['Francês','ce',103], HIS:['História','ce',101], GEO:['Geografia','ce',112],
