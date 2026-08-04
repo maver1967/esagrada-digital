@@ -11084,6 +11084,7 @@ function showScanResultInline(rec, a, t, an){
 
 function detectPresenceAnomalies(dateIso = diIsoToday()) {
   const acessosHoje = (DB.acessos || []).filter(x => x.data === dateIso);
+  const totalEntradasHoje = acessosHoje.filter(x => x.tipo === 'ENTRADA').length;
   const dia = diDiaFromIso(dateIso);
   const studentMap = {};
 
