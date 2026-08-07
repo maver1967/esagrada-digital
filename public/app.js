@@ -10848,8 +10848,54 @@ function updateFsBtn(){
     ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
 }
-document.addEventListener('fullscreenchange',updateFsBtn);
-document.addEventListener('webkitfullscreenchange',updateFsBtn);
+
+/* ---------- MODO PROJETOR (Full Screen Fit - Sem Scroll) ---------- */
+function toggleProjectorMode(enable) {
+  var isProj = typeof enable === 'boolean' ? enable : !document.body.classList.contains('mode-projetor');
+  if (isProj) {
+    document.documentElement.classList.add('mode-projetor');
+    document.body.classList.add('mode-projetor');
+    if (!fsElement()) {
+      var el = document.documentElement;
+      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+      if (req) {
+        Promise.resolve(req.call(el)).catch(function(){});
+      }
+    }
+    if (typeof toast === 'function') toast('📺 Modo Projetor activo (Sem Scroll · Ecrã Inteiro)', false);
+  } else {
+    document.documentElement.classList.remove('mode-projetor');
+    document.body.classList.remove('mode-projetor');
+    if (fsElement()) {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+    if (typeof toast === 'function') toast('Sair do Modo Projetor', false);
+  }
+  updateProjBtn();
+}
+
+function updateProjBtn() {
+  var isProj = document.body.classList.contains('mode-projetor');
+  var btns = document.querySelectorAll('.btn-projetor-toggle');
+  btns.forEach(function(b) {
+    if (isProj) b.classList.add('active');
+    else b.classList.remove('active');
+    b.title = isProj ? 'Sair do Modo Projetor (ESC)' : 'Modo Projetor (Ecrã Inteiro · Sem Scroll)';
+  });
+}
+
+function onFsChange() {
+  updateFsBtn();
+  if (!fsElement()) {
+    document.documentElement.classList.remove('mode-projetor');
+    document.body.classList.remove('mode-projetor');
+    updateProjBtn();
+  }
+}
+
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
 
 /* ---------- INSTALAÇÃO DA APP (PWA) ---------- */
 var PWA_ICON_192 = './assets/pwa_icon_192.png';
