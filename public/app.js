@@ -1053,6 +1053,7 @@ function checkPortariaPass(targetView) {
 
 const VIEWS={};
 function go(v){
+  window._resetScrollOnNextRender = true;
   if (typeof UI !== 'undefined' && UI.view === 'portaria' && window._portariaLocked !== false && v !== 'portaria') {
     if (typeof toast === 'function') toast('🔒 Modo Portaria Bloqueado! Insira a palavra-passe para sair.');
     togglePortariaPassInput(v);
@@ -1073,7 +1074,6 @@ function go(v){
     }
   } catch(e) { console.error('go() error:', e); }
   render();
-  try { window.scrollTo&&($('#root').scrollTop=0); } catch(e){}
 }
 function setSub(s){
   const el=$('#topSub');
@@ -1102,6 +1102,36 @@ if (typeof window !== 'undefined') {
 function render(){
   const r=$('#root');
   if(!r) return;
+
+  const shouldReset = window._resetScrollOnNextRender;
+  window._resetScrollOnNextRender = false;
+
+  let winY = 0, rootY = 0;
+  const elementScrolls = {};
+  let activeId = null, focusStart = 0, focusEnd = 0;
+
+  if (!shouldReset) {
+    winY = window.scrollY || document.documentElement.scrollTop || 0;
+    if (r) rootY = r.scrollTop || 0;
+
+    if (r) {
+      const scrollables = r.querySelectorAll('[id]');
+      scrollables.forEach(el => {
+        if (el.scrollTop > 0) {
+          elementScrolls[el.id] = el.scrollTop;
+        }
+      });
+    }
+
+    if (document.activeElement && document.activeElement.id) {
+      activeId = document.activeElement.id;
+      if (typeof document.activeElement.selectionStart === 'number') {
+        focusStart = document.activeElement.selectionStart;
+        focusEnd = document.activeElement.selectionEnd;
+      }
+    }
+  }
+
   r.innerHTML='';
   try {
     const fn = VIEWS[UI.view] || (()=>r.innerHTML='<div class="empty">Em construção</div>');
@@ -1114,6 +1144,31 @@ function render(){
       <p style="font-size:13px;font-family:monospace;background:#fee2e2;padding:10px;border-radius:8px">${esc(e.stack || e.toString())}</p>
       <button class="btn sm" onclick="go('dash')">Voltar ao Painel</button>
     </div>`;
+  }
+
+  if (!shouldReset) {
+    if (winY > 0) window.scrollTo(0, winY);
+    if (rootY > 0 && r) r.scrollTop = rootY;
+
+    Object.keys(elementScrolls).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollTop = elementScrolls[id];
+      }
+    });
+
+    if (activeId) {
+      const actEl = document.getElementById(activeId);
+      if (actEl && typeof actEl.focus === 'function') {
+        actEl.focus();
+        if (typeof actEl.setSelectionRange === 'function') {
+          try { actEl.setSelectionRange(focusStart, focusEnd); } catch(e){}
+        }
+      }
+    }
+  } else {
+    window.scrollTo(0, 0);
+    if (r) r.scrollTop = 0;
   }
 }
 
