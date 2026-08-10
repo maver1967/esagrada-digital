@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DIRECAO
+  SECRETARIA
+  PROFESSOR
+  ALUNO
+}
+
+model User {
+  id        String   @id @default(uuid())
+  code      String   @unique // e.g. 'p104', 'p114', 'ESF000009', 'direcao'
+  email     String?  @unique
+  password  String   // hashed password
+  name      String
+  role      Role     @default(PROFESSOR)
+  avatar    String?  @db.Text
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher   Teacher?
+  student   Student?
+
+  @@index([code])
+  @@index([email])
+}
+
+model School {
+  id          String   @id @default(uuid())
+  nome        String   @default("Escola Pré-Universitária Sagrada Família de Maxixe")
+  sigla       String   @default("EPUSF")
+  pais        String   @default("República de Moçambique")
+  provincia   String   @default("Inhambane")
+  distrito    String   @default("Maxixe")
+  ano         Int      @default(2026)
+  director    String   @default("Pe. Roberto Giuseppe Maver")
+  adjunto     String   @default("André Feniosse Nhabique")
+  updatedAt   DateTime @updatedAt
+}
+
+model Teacher {
+  id          String       @id // e.g. 'p104', 'p114'
+  userId      String?      @unique
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code        String       @unique
+  name        String
+  disciplinas String?      @db.Text
+  phone       String?
+  active      Boolean      @default(true)
+  assignments Assignment[]
+  timetable   TimetableSlot[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Class {
+  id          String          @id // e.g. '10-1', '10-2', '11'
+  code        String          @unique // e.g. '10A', '10B', '11'
+  name        String          // e.g. '10-1'
+  classe      String          // e.g. '10ª', '11ª'
+  turma       String          // e.g. '1', '2'
+  tipo        String          // e.g. 'Mista A / B1 / B2'
+  students    Student[]
+  assignments Assignment[]
+  timetable   TimetableSlot[]
+  grades      Grade[]
+  attendances Attendance[]
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Student {
+  id           String       @id // e.g. 'ESF000009'
+  userId       String?      @unique
+  user         User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code         String       @unique
+  num          Int          @default(0)
+  name         String
+  gender       String       // 'H' or 'M'
+  birthDate    String?
+  fatherName   String?
+  contact      String?
+  classId      String
+  class        Class        @relation(fields: [classId], references: [id])
+  section      String?      // 'A', 'B1', 'B2'
+  grades       Grade[]
+  attendances  Attendance[]
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([classId])
+}
+
+model Subject {
+  id          String          @id // e.g. 'POR', 'FIL', 'ITA', 'MAT'
+  name        String          @unique // e.g. 'Filosofia', 'Italiano'
+  category    String          @default("Tronco Comum")
+  assignments Assignment[]
+  timetable   TimetableSlot[]
+  grades      Grade[]
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Assignment {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  hours     Int      @default(2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classId, subjectId, teacherId])
+}
+
+model TimetableSlot {
+  id        String   @id @default(uuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  day       Int      // 1 (Segunda) to 5 (Sexta)
+  slot      Int      // 1 to 6 (Tempos de aula)
+  group     String?  // 'A', 'B1', 'B2'
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([classId, day])
+  @@index([teacherId, day])
+}
+
+model Grade {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId    String
+  class      Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  trimester  Int      @default(1) // 1, 2, 3
+  evalType   String   // 'a1', 'a2', 'a3', 'media'
+  value      Float
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([studentId, subjectId, trimester, evalType])
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  type        String   @default("FALTA") // 'FALTA', 'PRESENCA', 'JUSTIFICADA'
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([studentId, date])
+}

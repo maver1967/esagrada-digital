@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
+  "/api/seed/route": "/api/seed",
+  "/horarios/page": "/horarios",
+  "/login/page": "/login",
+  "/pautas/page": "/pautas",
+  "/page": "/",
+  "/dashboard/page": "/dashboard"
+}
