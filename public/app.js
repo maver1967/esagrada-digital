@@ -4191,8 +4191,6 @@ function doLogin(id, pass) {
   if (found.pass && found.pass !== cleanPass && cleanPass !== '1234' && cleanPass !== '123456') {
     return { ok: false, msg: 'Palavra-passe incorreta.' };
   }
-    return { ok: false, msg: 'Palavra-passe incorreta.' };
-  }
 
   AUTH_USER = found;
   PREVIEW_ROLE = found.role;
