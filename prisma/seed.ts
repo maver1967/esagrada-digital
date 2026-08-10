@@ -4,12 +4,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting ESAGRADA database seeding...');
+  console.log('🌱 A iniciar o povoamento (Seed) da base de dados ESAGRADA...');
 
-  // Default hashed password for initial setup
   const hashedPassword = await bcrypt.hash('123456', 10);
 
-  // 1. Create School Metadata
+  // 1. Escola Metadata
   await prisma.school.upsert({
     where: { id: 'escola-main' },
     update: {},
@@ -26,7 +25,20 @@ async function main() {
     },
   });
 
-  // 2. Create Users & Teachers
+  // 2. Utilizador da Direção
+  await prisma.user.upsert({
+    where: { code: 'direcao' },
+    update: { password: hashedPassword },
+    create: {
+      code: 'direcao',
+      email: 'direcao@esagrada.mz',
+      password: hashedPassword,
+      name: 'Pe. Roberto Giuseppe Maver (Direção)',
+      role: Role.DIRECAO,
+    },
+  });
+
+  // 3. Docentes & Utilizadores
   const teachersData = [
     { id: 'p101', code: 'p101', name: 'Edilson Chissano', email: 'p101@esagrada.mz', disciplinas: 'Português, História' },
     { id: 'p102', code: 'p102', name: 'Filipe J. Majone', email: 'p102@esagrada.mz', disciplinas: 'Inglês' },
@@ -45,23 +57,10 @@ async function main() {
     { id: 'p115', code: 'p115', name: 'Cheila Francisco Naife', email: 'p115@esagrada.mz', disciplinas: 'Inglês Integral' },
   ];
 
-  // Direção User
-  await prisma.user.upsert({
-    where: { code: 'direcao' },
-    update: {},
-    create: {
-      code: 'direcao',
-      email: 'direcao@esagrada.mz',
-      password: hashedPassword,
-      name: 'Pe. Roberto Giuseppe Maver (Direção)',
-      role: Role.DIRECAO,
-    },
-  });
-
   for (const t of teachersData) {
     const user = await prisma.user.upsert({
       where: { code: t.code },
-      update: { name: t.name, email: t.email },
+      update: { name: t.name, email: t.email, password: hashedPassword },
       create: {
         code: t.code,
         email: t.email,
@@ -84,7 +83,7 @@ async function main() {
     });
   }
 
-  // 3. Create Classes
+  // 4. Turmas
   const classesData = [
     { id: '10-1', code: '10A', name: '10-1', classe: '10ª', turma: '1', tipo: 'Mista A / B1 / B2' },
     { id: '10-2', code: '10B', name: '10-2', classe: '10ª', turma: '2', tipo: 'Pura B2' },
@@ -99,7 +98,7 @@ async function main() {
     });
   }
 
-  // 4. Create Subjects
+  // 5. Disciplinas
   const subjectsData = [
     { id: 'POR', name: 'Português', category: 'Tronco Comum' },
     { id: 'ING', name: 'Inglês', category: 'Tronco Comum' },
@@ -129,23 +128,23 @@ async function main() {
     });
   }
 
-  // 5. Create Teacher Assignments (Including Pe. Maver for 11a Filosofia, and Fausto Ghirardelli for 10a Filosofia & 10a/11a Italiano)
+  // 6. Atribuição de Docentes
   const assignments = [
     // 10-1
-    { classId: '10-1', subjectId: 'FIL', teacherId: 'p104' }, // Fausto Ghirardelli
-    { classId: '10-1', subjectId: 'ITA', teacherId: 'p104' }, // Fausto Ghirardelli
+    { classId: '10-1', subjectId: 'FIL', teacherId: 'p104' }, // Prof. Fausto Ghirardelli
+    { classId: '10-1', subjectId: 'ITA', teacherId: 'p104' }, // Prof. Fausto Ghirardelli
     { classId: '10-1', subjectId: 'POR', teacherId: 'p101' },
     { classId: '10-1', subjectId: 'MAT', teacherId: 'p105' },
     { classId: '10-1', subjectId: 'ING', teacherId: 'p102' },
 
     // 10-2
-    { classId: '10-2', subjectId: 'FIL', teacherId: 'p104' }, // Fausto Ghirardelli
+    { classId: '10-2', subjectId: 'FIL', teacherId: 'p104' }, // Prof. Fausto Ghirardelli
     { classId: '10-2', subjectId: 'POR', teacherId: 'p101' },
     { classId: '10-2', subjectId: 'MAT', teacherId: 'p105' },
 
     // 11ª
-    { classId: '11', subjectId: 'FIL', teacherId: 'p114' }, // Pe. Maver
-    { classId: '11', subjectId: 'ITA', teacherId: 'p104' }, // Fausto Ghirardelli
+    { classId: '11', subjectId: 'FIL', teacherId: 'p114' }, // Pe. Roberto G. Maver
+    { classId: '11', subjectId: 'ITA', teacherId: 'p104' }, // Prof. Fausto Ghirardelli
     { classId: '11', subjectId: 'POR', teacherId: 'p101' },
     { classId: '11', subjectId: 'MAT', teacherId: 'p105' },
   ];
@@ -164,12 +163,53 @@ async function main() {
     });
   }
 
-  console.log('✅ ESAGRADA database seeding completed successfully!');
+  // 7. Alunos da Turma 10-1
+  const roster10_1 = [
+    { code: 'ESF000009', num: 1, name: 'Adilson Pedro', gender: 'H' },
+    { code: 'ESF000109', num: 2, name: 'Ailton de Eusébio André Geraldo Muhurube', gender: 'H' },
+    { code: 'ESF000067', num: 3, name: 'Akicha Júlio Luciano Malige', gender: 'M' },
+    { code: 'ESF000108', num: 4, name: 'Alexandre Romão Alexandre Júnior', gender: 'H' },
+    { code: 'ESF000019', num: 5, name: 'Aliana Patrício Nhanombe', gender: 'M' },
+    { code: 'ESF000104', num: 6, name: 'Allan de Jesus Guilherme', gender: 'H' },
+    { code: 'ESF000068', num: 7, name: 'Anderson Gervásio Baptista Neto', gender: 'H' },
+    { code: 'ESF000010', num: 8, name: 'Antónia Pedro Horácio', gender: 'M' },
+    { code: 'ESF000045', num: 9, name: 'Arthur Vieira Rios Lage', gender: 'H' },
+    { code: 'ESF000099', num: 10, name: 'Chéldio Lázaro Nhaguilunguane', gender: 'H' },
+  ];
+
+  for (const st of roster10_1) {
+    const user = await prisma.user.upsert({
+      where: { code: st.code },
+      update: { name: st.name, password: hashedPassword },
+      create: {
+        code: st.code,
+        password: hashedPassword,
+        name: st.name,
+        role: Role.ALUNO,
+      },
+    });
+
+    await prisma.student.upsert({
+      where: { code: st.code },
+      update: { name: st.name, classId: '10-1', num: st.num, userId: user.id },
+      create: {
+        id: st.code,
+        code: st.code,
+        num: st.num,
+        name: st.name,
+        gender: st.gender,
+        classId: '10-1',
+        userId: user.id,
+      },
+    });
+  }
+
+  console.log('✅ SEED concluído com sucesso! Todas as turmas, professores e alunos foram criados.');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding error:', e);
+    console.error('❌ Erro no seed:', e);
     process.exit(1);
   })
   .finally(async () => {
