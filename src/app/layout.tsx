@@ -31,8 +31,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/style.css" />
-        <link rel="stylesheet" href="/premium.css" />
+        <link rel="stylesheet" href="/style.css?v=4.2.4-fix2" />
+        <link rel="stylesheet" href="/premium.css?v=4.2.4-fix2" />
       </head>
       <body className="antialiased">
         <SessionProvider>

@@ -869,6 +869,161 @@ table.tt td.cell:hover {
   font-weight: 800 !important;
 }
 
+/* ==================== ULTRA-HIGH CONTRAST LIGHT MODE SYSTEM ==================== */
+:root:not([data-theme="dark"]) {
+  --bg-color: #f8fafc !important;
+  --bg-body: #ffffff !important;
+  --bg-card: #ffffff !important;
+  --surface: #ffffff !important;
+  --surface-2: #f1f5f9 !important;
+  --card-bg: #ffffff !important;
+  --paper: #ffffff !important;
+  --paper-2: #f1f5f9 !important;
+
+  --text-main: #0f172a !important;
+  --text-muted: #334155 !important;
+  --text-dim: #475569 !important;
+  --title-color: #0f172a !important;
+  --ink: #0f172a !important;
+  --ink-soft: #334155 !important;
+  --ink-faint: #475569 !important;
+  --txt: #0f172a !important;
+  --txt-dim: #475569 !important;
+
+  --border-color: #cbd5e1 !important;
+  --border-bright: #94a3b8 !important;
+  --line: #cbd5e1 !important;
+  --line-2: #e2e8f0 !important;
+
+  --shadow-card: 0 4px 12px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root:not([data-theme="dark"]) body {
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) .card,
+:root:not([data-theme="dark"]) .panel,
+:root:not([data-theme="dark"]) .glass-panel,
+:root:not([data-theme="dark"]) .filter-box {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) .card-h {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Light mode form elements - NO MURKY GREY! Pure white background with crisp dark text & strong border */
+:root:not([data-theme="dark"]) input[type=text],
+:root:not([data-theme="dark"]) input[type=date],
+:root:not([data-theme="dark"]) input[type=time],
+:root:not([data-theme="dark"]) input[type=number],
+:root:not([data-theme="dark"]) input[type=email],
+:root:not([data-theme="dark"]) select,
+:root:not([data-theme="dark"]) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+:root:not([data-theme="dark"]) select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) label,
+:root:not([data-theme="dark"]) .field label {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+/* Light mode Diário de Aula Header & Filter Panels */
+:root:not([data-theme="dark"]) div[style*="background:var(--bg-card)"],
+:root:not([data-theme="dark"]) div[style*="background:var(--bg-body)"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Light mode Diário de Aula Roster & Student Text */
+:root:not([data-theme="dark"]) .student-row,
+:root:not([data-theme="dark"]) div[style*="border-bottom:1px solid var(--line)"] {
+  background-color: #ffffff !important;
+  border-bottom-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) span[style*="color:var(--txt)"],
+:root:not([data-theme="dark"]) div[style*="color:var(--txt)"],
+:root:not([data-theme="dark"]) b[style*="color:var(--txt)"] {
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) span[style*="color:var(--txt-dim)"],
+:root:not([data-theme="dark"]) div[style*="color:var(--txt-dim)"] {
+  color: #475569 !important;
+}
+
+/* Light mode Attendance Button Pills (P, F, J) */
+:root:not([data-theme="dark"]) div[style*="background:var(--bg-body)"] {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][onclick*="'P'"] {
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][onclick*="'F'"] {
+  color: #0f172a !important;
+}
+
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][onclick*="'FJ'"] {
+  color: #0f172a !important;
+}
+
+/* Selected Attendance States in Light Mode */
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][style*="background:var(--emerald)"] {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][style*="background:var(--rose)"] {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+:root:not([data-theme="dark"]) button[onclick*="diSetState"][style*="background:var(--amber)"] {
+  background-color: #d97706 !important;
+  color: #ffffff !important;
+}
+
+/* Light mode Tables (Pautas, Horários, etc.) */
+:root:not([data-theme="dark"]) table {
+  background-color: #ffffff !important;
+}
+
+:root:not([data-theme="dark"]) table th {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+:root:not([data-theme="dark"]) table td {
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
 
 
 
