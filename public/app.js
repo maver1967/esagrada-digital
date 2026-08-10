@@ -5150,7 +5150,7 @@ function ensureTeacherAssignmentsFix(db){
 
   function getTeacherForSubjAndClass(sid, cid) {
     if (filSubjIds.includes(sid)) {
-      return 'p114';
+      return 'p114'; // Pe. Maver (10-1, 10-2, 11ª)
     }
     return sidToTid[sid] || null;
   }
