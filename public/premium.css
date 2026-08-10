@@ -718,5 +718,157 @@ table.tt td.cell:hover {
   color: #ffffff !important;
 }
 
+/* ==================== HIGH CONTRAST & ACCESSIBILITY OVERRIDES ==================== */
+
+/* High Contrast Mode for Dark Theme */
+[data-theme="dark"] {
+  --text-main: #ffffff !important;
+  --text-muted: #e2e8f0 !important;
+  --text-dim: #cbd5e1 !important;
+  --title-color: #ffffff !important;
+  --border-color: rgba(255, 255, 255, 0.2) !important;
+  --border-bright: #38bdf8 !important;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] .app {
+  color: #ffffff !important;
+}
+
+/* Headings & Titles */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] .vhead h1,
+[data-theme="dark"] .card-h h3,
+[data-theme="dark"] .ttl {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* Secondary & Muted Text High Contrast */
+[data-theme="dark"] .sub,
+[data-theme="dark"] .subtxt,
+[data-theme="dark"] .hint,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .ink-soft,
+[data-theme="dark"] .ink-faint,
+[data-theme="dark"] small,
+[data-theme="dark"] .vhead p,
+[data-theme="dark"] .navlbl,
+[data-theme="dark"] .sec-lbl,
+[data-theme="dark"] .foot {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+  opacity: 1 !important;
+}
+
+/* Form Labels & Field Contrast */
+[data-theme="dark"] label,
+[data-theme="dark"] .field label,
+[data-theme="dark"] .form-label {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* Input & Select Controls High Contrast */
+[data-theme="dark"] input[type=text],
+[data-theme="dark"] input[type=date],
+[data-theme="dark"] input[type=time],
+[data-theme="dark"] input[type=number],
+[data-theme="dark"] input[type=email],
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  color: #ffffff !important;
+  background-color: #0b1324 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3) !important;
+}
+
+/* Cards & Containers High Contrast */
+[data-theme="dark"] .card,
+[data-theme="dark"] .glass-panel,
+[data-theme="dark"] .diario-card,
+[data-theme="dark"] .filter-box {
+  background: #0d172e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .card-h {
+  background: rgba(15, 26, 48, 0.9) !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Diário de Aula Roster & Attendance Controls High Contrast */
+[data-theme="dark"] .student-row {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .student-name,
+[data-theme="dark"] td font,
+[data-theme="dark"] tr td {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Attendance Buttons (P = Presente, F = Falta, J = Justificada) */
+.btn-att-p, [data-att="P"] {
+  font-weight: 800 !important;
+}
+
+[data-theme="dark"] .btn-att-p.active {
+  background: #059669 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #34d399 !important;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4) !important;
+}
+
+[data-theme="dark"] .btn-att-f.active {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #f87171 !important;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.4) !important;
+}
+
+[data-theme="dark"] .btn-att-j.active {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #fbbf24 !important;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4) !important;
+}
+
+/* Navigation Tabs Contrast */
+[data-theme="dark"] .nav-tabs button,
+[data-theme="dark"] .tab-btn {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .nav-tabs button.active,
+[data-theme="dark"] .tab-btn.active {
+  color: #ffffff !important;
+  background: #1e3a8a !important;
+  border-bottom: 3px solid #38bdf8 !important;
+  font-weight: 800 !important;
+}
+
+
 
 
