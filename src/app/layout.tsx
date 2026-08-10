@@ -4,7 +4,7 @@ import Script from 'next/script';
 import SessionProvider from '@/presentation/components/SessionProvider';
 
 export const metadata: Metadata = {
-  title: 'Gestor de Horários · ESAGRADA v4.2.3',
+  title: 'Gestor de Horários · ESAGRADA v4.2.4',
   description: 'Plataforma Digital de Gestão Escolar, Horários e Pautas da EPUSF Maxixe',
   manifest: '/manifest.json',
   icons: {
