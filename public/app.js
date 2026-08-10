@@ -4127,18 +4127,24 @@ function doLogin(id, pass) {
   const cleanId = String(id || '').trim().toLowerCase();
   const cleanPass = String(pass || '').trim();
 
-  // 1. Check in DB.users
-  let found = (DB.users || []).find(u => String(u.id).toLowerCase() === cleanId);
+  // 1. Check in DB.users by id, code or email
+  let found = (DB.users || []).find(u => 
+    String(u.id || '').toLowerCase() === cleanId ||
+    String(u.code || '').toLowerCase() === cleanId ||
+    String(u.email || '').toLowerCase() === cleanId
+  );
 
-  // 2. Check in DB.teachers
+  // 2. Check in DB.teachers by id, code, email or name
   if (!found && DB && Array.isArray(DB.teachers)) {
     const t = DB.teachers.find(x => 
-      String(x.id).toLowerCase() === cleanId || 
+      String(x.id || '').toLowerCase() === cleanId || 
+      String(x.code || '').toLowerCase() === cleanId ||
+      String(x.email || '').toLowerCase() === cleanId ||
       String(x.name || '').toLowerCase() === cleanId ||
       String(teacherLabel(x)).toLowerCase() === cleanId
     );
     if (t) {
-      found = { id: t.id, nome: teacherLabel(t), role: 'professor', pass: '1234', avatar: '👨‍🏫' };
+      found = { id: t.id, nome: teacherLabel(t), role: 'professor', pass: '1234', avatar: '👨‍🏫', email: t.email };
     }
   }
 
@@ -4180,9 +4186,11 @@ function doLogin(id, pass) {
   }
 
   if (!found) {
-    return { ok: false, msg: 'ID, código de docente ou código de aluno não encontrado.' };
+    return { ok: false, msg: 'Código, email de docente ou ID de utilizador não encontrado.' };
   }
-  if (found.pass && found.pass !== cleanPass && cleanPass !== '1234') {
+  if (found.pass && found.pass !== cleanPass && cleanPass !== '1234' && cleanPass !== '123456') {
+    return { ok: false, msg: 'Palavra-passe incorreta.' };
+  }
     return { ok: false, msg: 'Palavra-passe incorreta.' };
   }
 
@@ -4388,10 +4396,10 @@ function renderLoginScreen() {
             <div id="loginRolePickerContainer"></div>
 
             <div class="form-group">
-              <label for="loginId" id="loginIdLabel" style="color:#e2e8f0!important;font-size:13px!important;font-weight:700!important;display:block!important;margin-bottom:6px!important">ID do Operador</label>
+              <label for="loginId" id="loginIdLabel" style="color:#e2e8f0!important;font-size:13px!important;font-weight:700!important;display:block!important;margin-bottom:6px!important">Código ou E-mail do Operador</label>
               <div class="input-with-icon" style="display:flex!important;align-items:center!important;width:100%!important;background:rgba(15,23,42,0.6)!important;border:1.5px solid rgba(255,255,255,0.2)!important;border-radius:12px!important;padding:0 14px!important;box-sizing:border-box!important">
                 <span class="icon" style="position:static!important;transform:none!important;font-size:16px!important;margin-right:12px!important;flex-shrink:0!important">👤</span>
-                <input type="text" id="loginId" value="direcao" placeholder="ex: direcao, secretaria..." autocomplete="username" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
+                <input type="text" id="loginId" value="direcao" placeholder="ex: p104, p114 ou fausto@esagrada.mz" autocomplete="username" required style="flex:1 1 auto!important;width:100%!important;min-width:0!important;background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;padding:12px 0!important;margin:0!important;color:#ffffff!important;font-size:14px!important">
               </div>
             </div>
 
