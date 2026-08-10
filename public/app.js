@@ -5106,7 +5106,7 @@ VIEWS.archive=function(r){
 
 function ensureTeacherAssignmentsFix(db){
   if(!db) return;
-  const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia'].includes(s.name)).map(s => s.id);
+  const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia','Ética e Cidadania'].includes(s.name)).map(s => s.id);
   const itaSubj = (db.subjects || []).find(s => s.name === 'Italiano');
 
   if (Array.isArray(db.assignments)) {
@@ -5156,7 +5156,7 @@ function ensureTeacherAssignmentsFix(db){
   const seeded=mergeAnagSeed();
   const fseeded=mergeFotosSeed();
   const pseeded=mergeAnagPatch();
-  if(!saved) await persist(); else if(seeded||fseeded||pseeded) await persist();
+  await persist();
   try{ applyT1Overrides(); }catch(e){}
   await restoreBackupHandle();
 
