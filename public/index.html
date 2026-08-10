@@ -28,15 +28,16 @@
       document.documentElement.setAttribute('data-theme', 'dark');
     }
   })();
-  function toggleTheme() {
+  window.toggleTheme = function toggleTheme() {
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if(isDark) {
       document.documentElement.removeAttribute('data-theme');
       localStorage.setItem('esagrada_theme', 'light');
     } else {
       document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('esagrada_theme', 'dark');
     }
-  }
+  };
   window.forceAppUpdate = function() {
     try {
       if ('serviceWorker' in navigator) {

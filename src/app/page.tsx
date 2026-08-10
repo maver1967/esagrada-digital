@@ -10,6 +10,21 @@ export default function Home() {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
 
+    // Define toggleTheme on window
+    (window as any).toggleTheme = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('esagrada_theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('esagrada_theme', 'dark');
+      }
+      if (typeof (window as any).renderDashCharts === 'function') {
+        try { (window as any).renderDashCharts(); } catch (e) {}
+      }
+    };
+
     // Ensure #app is displayed once scripts load
     const timer = setTimeout(() => {
       const appEl = document.getElementById('app');

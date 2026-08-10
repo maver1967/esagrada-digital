@@ -45,6 +45,21 @@ function clone(o){return JSON.parse(JSON.stringify(o))}
 function toMin(t){const[h,m]=t.split(':').map(Number);return h*60+m}
 function gapMin(a,b){return toMin(b)-toMin(a)}
 
+/* ---------- THEME TOGGLE ---------- */
+window.toggleTheme = function() {
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('esagrada_theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('esagrada_theme', 'dark');
+  }
+  if (typeof renderDashCharts === 'function' && typeof UI !== 'undefined' && UI.view === 'dash') {
+    try { renderDashCharts(); } catch(e){}
+  }
+};
+
 /* ---------- STATE ---------- */
 let DB = null;
 let UI = { view:'dash', cls:null, teacher:null, expTab:'class', expTarget:null };
