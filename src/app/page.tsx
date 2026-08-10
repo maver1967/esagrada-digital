@@ -100,6 +100,23 @@ export default function Home() {
             <span className="savechip" id="saveChip">
               <span className="dot"></span>Guardado
             </span>
+            <span
+              className="versionpill"
+              id="versionPill"
+              style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#38bdf8',
+                background: 'rgba(56, 189, 248, 0.15)',
+                padding: '4px 10px',
+                borderRadius: '99px',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+              }}
+              title="Versão Oficial ESAGRADA"
+            >
+              v4.2.3
+            </span>
             <span className="yearpill" id="yearPill">
               2026
             </span>
