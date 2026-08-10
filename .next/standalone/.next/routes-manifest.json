@@ -70,6 +70,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/api/grades",
+      "regex": "^/api/grades(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/grades(?:/)?$"
+    },
+    {
       "page": "/api/seed",
       "regex": "^/api/seed(?:/)?$",
       "routeKeys": {},
@@ -82,10 +88,28 @@
       "namedRegex": "^/dashboard(?:/)?$"
     },
     {
+      "page": "/diario",
+      "regex": "^/diario(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/diario(?:/)?$"
+    },
+    {
+      "page": "/documentos",
+      "regex": "^/documentos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/documentos(?:/)?$"
+    },
+    {
       "page": "/horarios",
       "regex": "^/horarios(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/horarios(?:/)?$"
+    },
+    {
+      "page": "/lms",
+      "regex": "^/lms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lms(?:/)?$"
     },
     {
       "page": "/login",

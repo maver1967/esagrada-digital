@@ -114,6 +114,62 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/diario": {
+      "routeType": "page",
+      "response": "complete",
+      "compute": "static",
+      "htmlSize": 19334,
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/diario",
+      "dataRoute": "/diario.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/documentos": {
+      "routeType": "page",
+      "response": "complete",
+      "compute": "static",
+      "htmlSize": 19004,
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/documentos",
+      "dataRoute": "/documentos.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/horarios": {
       "routeType": "page",
       "response": "complete",
@@ -133,6 +189,34 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/horarios",
       "dataRoute": "/horarios.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/lms": {
+      "routeType": "page",
+      "response": "complete",
+      "compute": "static",
+      "htmlSize": 17237,
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/lms",
+      "dataRoute": "/lms.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
