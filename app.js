@@ -10568,7 +10568,7 @@ VIEWS.diario=function(r){
             <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff">Turma ${esc(les.tk)}</span>
             ${les.grps&&les.grps.length?`<span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;color:#fef08a">Secção ${les.grps.join('+')}</span>`:''}
           </div>
-          <div style="font-family:var(--serif);font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#ffffff">${esc(l.disc||les.disc)}</div>
+          <div style="font-family:var(--serif);font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#ffffff">${esc(les.disc)}</div>
           <div style="font-size:13px;opacity:.9;margin-top:4px;font-weight:600;color:#cbd5e1">${esc(rec.prof)}</div>
         </div>
         <div style="display:flex;gap:12px">${counter('Presentes',nP,'#34d399')}${counter('Faltas',nF,'#f87171')}${counter('Just.',nFJ,'#fbbf24')}</div>
