@@ -11,7 +11,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:db:push": "prisma db push",
-    "prisma:seed": "node --loader ts-node/register prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up",
+    "docker:dev:build": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
+    "docker:prod": "docker compose -f docker-compose.yml up -d --build"
   },
   "dependencies": {
     "@prisma/client": "^6.3.1",
@@ -19,7 +23,7 @@
     "clsx": "^2.1.1",
     "jose": "^5.9.6",
     "lucide-react": "^0.474.0",
-    "next": "^15.1.6",
+    "next": "^16.3.0",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -35,6 +39,7 @@
     "postcss": "^8.5.1",
     "prisma": "^6.3.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.12",
     "typescript": "^5.7.3"
   }
 }

@@ -1,10 +1,11 @@
 {
+  "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/seed/route": "app/api/seed/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/horarios/page": "app/horarios/page.js",
   "/login/page": "app/login/page.js",
-  "/pautas/page": "app/pautas/page.js",
   "/page": "app/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/pautas/page": "app/pautas/page.js"
 }

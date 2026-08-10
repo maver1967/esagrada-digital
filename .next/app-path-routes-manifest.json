@@ -1,10 +1,11 @@
 {
+  "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
   "/api/seed/route": "/api/seed",
+  "/dashboard/page": "/dashboard",
   "/horarios/page": "/horarios",
   "/login/page": "/login",
-  "/pautas/page": "/pautas",
   "/page": "/",
-  "/dashboard/page": "/dashboard"
+  "/pautas/page": "/pautas"
 }
