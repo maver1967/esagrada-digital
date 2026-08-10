@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="app" id="app">
+      <div className="app" id="app" style={{ display: 'none' }}>
         <aside className="side">
           <div className="brand">
             <div className="mark" id="brandMark"></div>
@@ -41,7 +41,7 @@ export default function Home() {
               onClick={() => (window as any).forceAppUpdate && (window as any).forceAppUpdate()}
               title="Clique para forçar atualização"
             >
-              v4.2.5 · 10/08/2026 · 🔄 atualizar
+              v4.2.4 · 10/08/2026 · 🔄 atualizar
             </span>
           </div>
         </aside>
@@ -115,7 +115,7 @@ export default function Home() {
               }}
               title="Versão Oficial ESAGRADA"
             >
-              v4.2.5
+              v4.2.4
             </span>
             <span className="yearpill" id="yearPill">
               2026

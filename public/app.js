@@ -5240,7 +5240,34 @@ function ensureTeacherAssignmentsFix(db){
 }
 
 
+/* ============================================================
+   ARRANQUE DA APLICAÇÃO
+   ============================================================ */
+(async function init(){
+  const saved = await loadDB();
+  DB = (saved && saved.settings && saved.classes && saved.tt) ? saved : seed();
+  ensureSchema(DB);
+  ensureUsers(DB);
+  ensureTeacherAssignmentsFix(DB);
+  const seeded=mergeAnagSeed();
+  const fseeded=mergeFotosSeed();
+  const pseeded=mergeAnagPatch();
+  await persist();
+  try{ applyT1Overrides(); }catch(e){}
+  await restoreBackupHandle();
 
+  if (!loadSession()) {
+    if (DB && Array.isArray(DB.users) && DB.users.length > 0) {
+      AUTH_USER = DB.users.find(u => u.id === 'direcao') || DB.users[0];
+      PREVIEW_ROLE = AUTH_USER.role;
+      saveSession(AUTH_USER.id);
+    }
+  }
+
+  const app=$('#app'); if(app) app.style.display='';
+  buildNav();
+  go('dash');
+})();
 
 
 
@@ -12526,32 +12553,3 @@ window.svGuardarComentario = function(itemId, itemType) {
   closeModal();
   svModalComentarios(itemId, itemType);
 };
-
-/* ============================================================
-   ARRANQUE DA APLICAÇÃO (BOOTSTRAP AT VERY END)
-   ============================================================ */
-(async function init(){
-  const saved = await loadDB();
-  DB = (saved && saved.settings && saved.classes && saved.tt) ? saved : seed();
-  ensureSchema(DB);
-  ensureUsers(DB);
-  ensureTeacherAssignmentsFix(DB);
-  const seeded=mergeAnagSeed();
-  const fseeded=mergeFotosSeed();
-  const pseeded=mergeAnagPatch();
-  await persist();
-  try{ applyT1Overrides(); }catch(e){}
-  await restoreBackupHandle();
-
-  if (!loadSession()) {
-    if (DB && Array.isArray(DB.users) && DB.users.length > 0) {
-      AUTH_USER = DB.users.find(u => u.id === 'direcao') || DB.users[0];
-      PREVIEW_ROLE = AUTH_USER.role;
-      saveSession(AUTH_USER.id);
-    }
-  }
-
-  const app=$('#app'); if(app) app.style.display='';
-  buildNav();
-  go('dash');
-})();

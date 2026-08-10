@@ -4,7 +4,7 @@ import Script from 'next/script';
 import SessionProvider from '@/presentation/components/SessionProvider';
 
 export const metadata: Metadata = {
-  title: 'Gestor de Horários · ESAGRADA v4.2.5',
+  title: 'Gestor de Horários · ESAGRADA v4.2.4',
   description: 'Plataforma Digital de Gestão Escolar, Horários e Pautas da EPUSF Maxixe',
   manifest: '/manifest.json',
   icons: {
@@ -46,7 +46,7 @@ export default function RootLayout({
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" strategy="afterInteractive" />
         <Script src="https://unpkg.com/html5-qrcode" strategy="afterInteractive" />
         <Script src="/qrcode.js" strategy="afterInteractive" />
-        <Script src="/app.js?v=4.2.5" strategy="lazyOnload" />
+        <Script src="/app.js?v=4.2.4" strategy="lazyOnload" />
       </body>
     </html>
   );
