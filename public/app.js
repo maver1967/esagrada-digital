@@ -10487,11 +10487,11 @@ VIEWS.diario=function(r){
 
   if(isFuture){
     head += `
-      <div style="background:var(--amber-light);border:1px solid var(--amber);color:#78350f;padding:14px 18px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.5);color:#fef08a;padding:14px 18px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;margin-bottom:18px">
         <span style="font-size:22px">🔒</span>
         <div>
-          <b>Aula Futura Agendada (${diFmtData(data)})</b><br>
-          <span style="font-weight:500;opacity:0.9">Por normas pedagógicas e regulamentares, o registo de presenças e lançamento do sumário só estará disponível no próprio dia da aula.</span>
+          <b style="color:#ffffff;font-size:14px">Aula Futura Agendada (${diFmtData(data)})</b><br>
+          <span style="font-weight:500;color:#fef08a">Por normas pedagógicas e regulamentares, o registo de presenças e lançamento do sumário só estará disponível no próprio dia da aula.</span>
         </div>
       </div>
     `;
@@ -10514,9 +10514,9 @@ VIEWS.diario=function(r){
   const chips=lessons.map((l,i)=>{
     const on=i===DIUI.sel;
     const g=l.grps&&l.grps.length?` <span style="opacity:.7">(${l.grps.join('+')})</span>`:'';
-    return `<button onclick="diSetSel(${i})" style="display:flex;flex-direction:column;gap:4px;text-align:left;border:1.5px solid ${on?'var(--navy)':'var(--line)'};background:${on?'var(--navy)':'var(--bg-card)'};color:${on?'#fff':'var(--txt)'};border-radius:12px;padding:12px 16px;cursor:pointer;min-width:160px;transition:all 0.2s;box-shadow:${on?'0 4px 12px rgba(20,35,63,0.15)':'0 1px 3px rgba(0,0,0,0.02)'}">
-      <span style="font-size:11px;font-weight:600;opacity:0.8;text-transform:uppercase;letter-spacing:0.5px;color:${on?'#9ab3db':'var(--txt-dim)'}">${l.slot.s}–${l.slot.e} · Turma ${esc(l.tk)}</span>
-      <span style="font-weight:800;font-size:15px;font-family:var(--serif)">${esc(l.disc)}${g}</span></button>`;
+    return `<button onclick="diSetSel(${i})" style="display:flex;flex-direction:column;gap:4px;text-align:left;border:1.5px solid ${on?'#38bdf8':'var(--border-color, #e2e8f0)'};background:${on?'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)':'var(--surface, #ffffff)'};color:${on?'#ffffff':'var(--text-main, #0f172a)'};border-radius:12px;padding:12px 16px;cursor:pointer;min-width:160px;transition:all 0.2s;box-shadow:${on?'0 4px 14px rgba(56,189,248,0.25)':'0 1px 3px rgba(0,0,0,0.02)'}">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${on?'#38bdf8':'var(--text-dim, #64748b)'}">${l.slot.s}–${l.slot.e} · Turma ${esc(l.tk)}</span>
+      <span style="font-weight:800;font-size:15px;font-family:var(--serif);color:${on?'#ffffff':'var(--title-color, #0f172a)'}">${esc(l.disc)}${g}</span></button>`;
   }).join('');
 
   const les=lessons[DIUI.sel];
@@ -10528,7 +10528,7 @@ VIEWS.diario=function(r){
   const nFJ=faltasArr.filter(([c,f])=>f.tipo==='FJ').length;
   const nP=total-nF-nFJ;
 
-  const counter=(lab,v,c,bg)=>`<div style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:12px;background:${bg};min-width:85px;border:1px solid ${c}33"><div style="font-family:var(--serif);font-size:26px;font-weight:700;color:${c};line-height:1">${v}</div><div style="font-size:11px;color:${c};font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-top:6px;opacity:0.9">${lab}</div></div>`;
+  const counter=(lab,v,c)=>`<div style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:12px;background:rgba(15,23,42,0.5);min-width:85px;border:1.5px solid ${c}"><div style="font-family:var(--serif);font-size:26px;font-weight:800;color:#ffffff;line-height:1">${v}</div><div style="font-size:11px;color:${c};font-weight:800;text-transform:uppercase;letter-spacing:0.8px;margin-top:6px">${lab}</div></div>`;
 
   const rows=roster.map(s=>{
     const f=(rec.faltas||{})[s.cod]; const st=!f?'P':f.tipo;
@@ -10561,17 +10561,17 @@ VIEWS.diario=function(r){
     <div class="card" style="padding:0;overflow:hidden;border:none;box-shadow:var(--shadow-md)">
       
       <!-- HERO CARD HEAD -->
-      <div style="background:linear-gradient(135deg, var(--navy) 0%, #1e3560 100%);color:#fff;padding:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);border-bottom:1.5px solid rgba(255,255,255,0.15);color:#ffffff;padding:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase">${les.slot.s}–${les.slot.e}</span>
-            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase">Turma ${esc(les.tk)}</span>
-            ${les.grps&&les.grps.length?`<span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700">Secção ${les.grps.join('+')}</span>`:''}
+            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#38bdf8">${les.slot.s}–${les.slot.e}</span>
+            <span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff">Turma ${esc(les.tk)}</span>
+            ${les.grps&&les.grps.length?`<span style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;color:#fef08a">Secção ${les.grps.join('+')}</span>`:''}
           </div>
-          <div style="font-family:var(--serif);font-size:28px;font-weight:800;letter-spacing:-0.5px">${esc(les.disc)}</div>
-          <div style="font-size:13px;opacity:.8;margin-top:4px;font-weight:500">${esc(rec.prof)}</div>
+          <div style="font-family:var(--serif);font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#ffffff">${esc(l.disc||les.disc)}</div>
+          <div style="font-size:13px;opacity:.9;margin-top:4px;font-weight:600;color:#cbd5e1">${esc(rec.prof)}</div>
         </div>
-        <div style="display:flex;gap:12px">${counter('Presentes',nP,'var(--emerald)','#fff')}${counter('Faltas',nF,'var(--rose)','#fff')}${counter('Just.',nFJ,'var(--amber)','#fff')}</div>
+        <div style="display:flex;gap:12px">${counter('Presentes',nP,'#34d399')}${counter('Faltas',nF,'#f87171')}${counter('Just.',nFJ,'#fbbf24')}</div>
       </div>
 
       <!-- ALUNOS LIST -->
