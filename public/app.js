@@ -5109,18 +5109,44 @@ VIEWS.archive=function(r){
 
 function ensureTeacherAssignmentsFix(db){
   if(!db) return;
-  const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia','Ética e Cidadania'].includes(s.name)).map(s => s.id);
-  const itaSubj = (db.subjects || []).find(s => s.name === 'Italiano');
 
-  if (Array.isArray(db.assignments)) {
-    db.assignments.forEach(a => {
-      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') {
-        a.tid = 'p114';
-      }
-      if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') a.tid = 'p104';
+  const subjTeacherMap = {
+    'Português': 'p101',
+    'História': 'p101',
+    'Inglês': 'p102',
+    'Francês': 'p103',
+    'Italiano': 'p104',
+    'Matemática': 'p105',
+    'Física': 'p106',
+    'Química': 'p107',
+    'Biologia': 'p108',
+    'Agro-pecuária': 'p108',
+    'Agro-Pecuária': 'p108',
+    'Educação Física': 'p109',
+    'Ed. Física': 'p109',
+    'Psicopedagogia': 'p110',
+    'Noções de Empreend.': 'p111',
+    'NE': 'p111',
+    'Geografia': 'p112',
+    'TIC': 'p113',
+    "TIC's": 'p113',
+    'Informática Avançada': 'p113',
+    'Inf. Avançada': 'p113',
+    'Filosofia': 'p114',
+    'Intr. à Filosofia': 'p114',
+    'Ética e Cidadania': 'p114',
+    'Inglês Integral': 'p115'
+  };
+
+  const sidToTid = {};
+  if (Array.isArray(db.subjects)) {
+    db.subjects.forEach(s => {
+      const expectedTid = subjTeacherMap[s.name];
+      if (expectedTid) sidToTid[s.id] = expectedTid;
     });
   }
 
+  // 1. Correct tt schedule entries for ALL teachers
   if (db.tt && typeof db.tt === 'object') {
     Object.keys(db.tt).forEach(cid => {
       const clsDays = db.tt[cid];
@@ -5132,8 +5158,9 @@ function ensureTeacherAssignmentsFix(db){
           const arr = slots[sid];
           if (Array.isArray(arr)) {
             arr.forEach(entry => {
-              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') entry.tid = 'p114';
-              if (itaSubj && entry.sid === itaSubj.id && entry.tid !== 'p104') entry.tid = 'p104';
+              if (entry.sid && sidToTid[entry.sid]) {
+                entry.tid = sidToTid[entry.sid];
+              }
             });
           }
         });
@@ -5141,6 +5168,47 @@ function ensureTeacherAssignmentsFix(db){
     });
   }
 
+  // 2. Correct assignments array for ALL teachers
+  if (Array.isArray(db.assignments) && Array.isArray(db.subjects)) {
+    db.assignments.forEach(a => {
+      if (a.sid && sidToTid[a.sid]) {
+        a.tid = sidToTid[a.sid];
+      }
+    });
+  }
+
+  // 3. Ensure missing assignments are generated for all classes
+  if (db.classes && db.subjects && Array.isArray(db.assignments)) {
+    db.classes.forEach(c => {
+      const cid = c.id;
+      const ctt = db.tt ? db.tt[cid] : null;
+      if (!ctt) return;
+      Object.values(ctt).forEach(dayObj => {
+        if (!dayObj) return;
+        Object.values(dayObj).forEach(slotEntries => {
+          if (!Array.isArray(slotEntries)) return;
+          slotEntries.forEach(entry => {
+            if (!entry.sid) return;
+            const expectedTid = sidToTid[entry.sid] || entry.tid;
+            if (!expectedTid) return;
+            const existing = db.assignments.find(a => (a.cid === cid || a.cid === c.name) && a.sid === entry.sid && a.tid === expectedTid);
+            if (!existing) {
+              db.assignments.push({
+                id: uid(),
+                tid: expectedTid,
+                sid: entry.sid,
+                cid: cid,
+                groups: entry.grp ? [entry.grp] : [],
+                hours: 2
+              });
+            }
+          });
+        });
+      });
+    });
+  }
+
+  // 4. Update teacher status labels
   if (Array.isArray(db.teachers)) {
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
     if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
@@ -5148,6 +5216,7 @@ function ensureTeacherAssignmentsFix(db){
     if (fausto) fausto.disciplinas = 'Italiano';
   }
 }
+
 
 /* ============================================================
    ARRANQUE DA APLICAÇÃO
