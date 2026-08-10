@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="app" id="app" style={{ display: 'none' }}>
+      <div className="app" id="app">
         <aside className="side">
           <div className="brand">
             <div className="mark" id="brandMark"></div>
