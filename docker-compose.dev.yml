@@ -42,7 +42,7 @@ services:
     container_name: esagrada_app_dev
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - .:/app
       - /app/node_modules
@@ -51,7 +51,7 @@ services:
       NODE_ENV: development
       DATABASE_URL: "mysql://esagrada_dev:esagrada_pass_dev@db:3306/esagrada_db_dev"
       NEXTAUTH_SECRET: "esagrada_dev_secret_key_2026"
-      NEXTAUTH_URL: "http://localhost:3000"
+      NEXTAUTH_URL: "http://localhost:3001"
     depends_on:
       db:
         condition: service_healthy
