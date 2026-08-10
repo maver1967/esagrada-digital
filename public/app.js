@@ -5132,9 +5132,6 @@ function ensureTeacherAssignmentsFix(db){
     "TIC's": 'p113',
     'Informática Avançada': 'p113',
     'Inf. Avançada': 'p113',
-    'Filosofia': 'p114',
-    'Intr. à Filosofia': 'p114',
-    'Ética e Cidadania': 'p114',
     'Inglês Integral': 'p115'
   };
 
@@ -5146,7 +5143,19 @@ function ensureTeacherAssignmentsFix(db){
     });
   }
 
-  // 1. Correct tt schedule entries for ALL teachers
+  const filSubjIds = (db.subjects || [])
+    .filter(s => ['Filosofia','Intr. à Filosofia','Ética e Cidadania'].includes(s.name) || s.id === 'FIL' || s.id === 'IFIC')
+    .map(s => s.id);
+  filSubjIds.push('FIL', 'IFIC');
+
+  function getTeacherForSubjAndClass(sid, cid) {
+    if (filSubjIds.includes(sid)) {
+      return 'p114';
+    }
+    return sidToTid[sid] || null;
+  }
+
+  // 1. Correct tt schedule entries
   if (db.tt && typeof db.tt === 'object') {
     Object.keys(db.tt).forEach(cid => {
       const clsDays = db.tt[cid];
@@ -5158,8 +5167,9 @@ function ensureTeacherAssignmentsFix(db){
           const arr = slots[sid];
           if (Array.isArray(arr)) {
             arr.forEach(entry => {
-              if (entry.sid && sidToTid[entry.sid]) {
-                entry.tid = sidToTid[entry.sid];
+              if (entry.sid) {
+                const t = getTeacherForSubjAndClass(entry.sid, cid);
+                if (t) entry.tid = t;
               }
             });
           }
@@ -5168,11 +5178,12 @@ function ensureTeacherAssignmentsFix(db){
     });
   }
 
-  // 2. Correct assignments array for ALL teachers
-  if (Array.isArray(db.assignments) && Array.isArray(db.subjects)) {
+  // 2. Correct assignments array
+  if (Array.isArray(db.assignments)) {
     db.assignments.forEach(a => {
-      if (a.sid && sidToTid[a.sid]) {
-        a.tid = sidToTid[a.sid];
+      if (a.sid) {
+        const t = getTeacherForSubjAndClass(a.sid, a.cid);
+        if (t) a.tid = t;
       }
     });
   }
@@ -5189,7 +5200,7 @@ function ensureTeacherAssignmentsFix(db){
           if (!Array.isArray(slotEntries)) return;
           slotEntries.forEach(entry => {
             if (!entry.sid) return;
-            const expectedTid = sidToTid[entry.sid] || entry.tid;
+            const expectedTid = getTeacherForSubjAndClass(entry.sid, cid) || entry.tid;
             if (!expectedTid) return;
             const existing = db.assignments.find(a => (a.cid === cid || a.cid === c.name) && a.sid === entry.sid && a.tid === expectedTid);
             if (!existing) {
@@ -5211,7 +5222,7 @@ function ensureTeacherAssignmentsFix(db){
   // 4. Update teacher status labels
   if (Array.isArray(db.teachers)) {
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
-    if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
+    if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia';
     const fausto = db.teachers.find(t => t.id === 'p104' || (t.name || '').includes('Fausto'));
     if (fausto) fausto.disciplinas = 'Italiano';
   }
