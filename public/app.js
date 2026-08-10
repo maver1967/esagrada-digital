@@ -5109,9 +5109,18 @@ function ensureTeacherAssignmentsFix(db){
   const filSubjIds = (db.subjects || []).filter(s => ['Filosofia','Intr. à Filosofia','Ética e Cidadania'].includes(s.name)).map(s => s.id);
   const itaSubj = (db.subjects || []).find(s => s.name === 'Italiano');
 
+  const is11 = (cid) => {
+    if (!cid) return false;
+    if (cid === '11') return true;
+    const c = (db.classes || []).find(x => x.id === cid || x.name === cid);
+    return c && (c.id === '11' || c.name === '11');
+  };
+
   if (Array.isArray(db.assignments)) {
     db.assignments.forEach(a => {
-      if (a.sid && filSubjIds.includes(a.sid) && a.tid !== 'p114') a.tid = 'p114';
+      if (a.sid && filSubjIds.includes(a.sid)) {
+        a.tid = is11(a.cid) ? 'p114' : 'p104';
+      }
       if (itaSubj && a.sid === itaSubj.id && a.tid !== 'p104') a.tid = 'p104';
     });
   }
@@ -5120,6 +5129,7 @@ function ensureTeacherAssignmentsFix(db){
     Object.keys(db.tt).forEach(cid => {
       const clsDays = db.tt[cid];
       if (!clsDays) return;
+      const targetFilTid = is11(cid) ? 'p114' : 'p104';
       Object.keys(clsDays).forEach(d => {
         const slots = clsDays[d];
         if (!slots) return;
@@ -5127,7 +5137,7 @@ function ensureTeacherAssignmentsFix(db){
           const arr = slots[sid];
           if (Array.isArray(arr)) {
             arr.forEach(entry => {
-              if (entry.sid && filSubjIds.includes(entry.sid) && entry.tid !== 'p114') entry.tid = 'p114';
+              if (entry.sid && filSubjIds.includes(entry.sid)) entry.tid = targetFilTid;
               if (itaSubj && entry.sid === itaSubj.id && entry.tid !== 'p104') entry.tid = 'p104';
             });
           }
@@ -5138,9 +5148,9 @@ function ensureTeacherAssignmentsFix(db){
 
   if (Array.isArray(db.teachers)) {
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
-    if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
+    if (maver) maver.disciplinas = 'Filosofia (11ª)';
     const fausto = db.teachers.find(t => t.id === 'p104' || (t.name || '').includes('Fausto'));
-    if (fausto) fausto.disciplinas = 'Italiano';
+    if (fausto) fausto.disciplinas = 'Italiano, Filosofia (10ª 1, 10ª 2)';
   }
 }
 
