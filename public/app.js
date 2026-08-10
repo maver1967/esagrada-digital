@@ -184,6 +184,8 @@ async function syncPush(force = false){
     const mergedAcessos = mergeById(DB.acessos || [], remoteData.acessos || [], 2000);
     const mergedDiario  = mergeById(DB.diario || [], remoteData.diario || [], 1000);
     const mergedAvisos  = mergeById(DB.avisos || [], remoteData.avisos || [], 500);
+    const mergedDT      = Object.assign({}, remoteData.diretoresTurma || {}, DB.diretoresTurma || {});
+    DB.diretoresTurma   = mergedDT;
 
     if (mergedAcessos.length !== (DB.acessos || []).length || mergedDiario.length !== (DB.diario || []).length || mergedAvisos.length !== (DB.avisos || []).length) {
       DB.acessos = mergedAcessos;
@@ -196,6 +198,7 @@ async function syncPush(force = false){
       acessos: mergedAcessos,
       diario: mergedDiario,
       avisos: mergedAvisos,
+      diretoresTurma: mergedDT,
       deletedAvisos: Array.from(new Set([...(DB.deletedAvisos || []), ...(remoteData.deletedAvisos || [])])),
       ts: Date.now()
     };
