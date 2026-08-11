@@ -82,6 +82,12 @@
       "namedRegex": "^/api/seed(?:/)?$"
     },
     {
+      "page": "/api/sync",
+      "regex": "^/api/sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/sync(?:/)?$"
+    },
+    {
       "page": "/dashboard",
       "regex": "^/dashboard(?:/)?$",
       "routeKeys": {},

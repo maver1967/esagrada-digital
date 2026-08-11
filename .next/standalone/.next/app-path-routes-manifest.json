@@ -4,6 +4,7 @@
   "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
   "/api/grades/route": "/api/grades",
   "/api/seed/route": "/api/seed",
+  "/api/sync/route": "/api/sync",
   "/dashboard/page": "/dashboard",
   "/diario/page": "/diario",
   "/documentos/page": "/documentos",

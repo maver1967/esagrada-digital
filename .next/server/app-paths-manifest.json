@@ -4,6 +4,7 @@
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/grades/route": "app/api/grades/route.js",
   "/api/seed/route": "app/api/seed/route.js",
+  "/api/sync/route": "app/api/sync/route.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/diario/page": "app/diario/page.js",
   "/documentos/page": "app/documentos/page.js",

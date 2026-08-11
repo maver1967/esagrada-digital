@@ -106,7 +106,34 @@ function getCloudSyncUrl() {
   if (typeof DB !== 'undefined' && DB.settings && DB.settings.syncUrl && DB.settings.syncUrl.trim()) {
     return DB.settings.syncUrl.trim();
   }
-  return 'https://jsonblob.com/api/jsonBlob/019fc7b0-c91d-780a-ac37-6f48d6a840ec';
+  if (typeof window !== 'undefined' && window.location && window.location.origin && !window.location.origin.includes('github.io')) {
+    return window.location.origin + '/api/sync';
+  }
+  var savedBlob = localStorage.getItem('esagrada_blob_url');
+  if (savedBlob && savedBlob.trim()) {
+    return savedBlob.trim();
+  }
+  return 'https://jsonblob.com/api/jsonBlob/019fefaf-ba6b-7646-b364-6f64942e24e1';
+}
+
+async function autoCreateJsonBlob(payload) {
+  try {
+    const res = await fetch('https://jsonblob.com/api/jsonBlob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || { acessos: [], diario: [], avisos: [], diretoresTurma: {} })
+    });
+    const loc = res.headers.get('Location') || res.headers.get('location');
+    if (loc) {
+      const fullUrl = loc.startsWith('http') ? loc : 'https://jsonblob.com' + loc;
+      localStorage.setItem('esagrada_blob_url', fullUrl);
+      if (typeof DB !== 'undefined' && DB.settings) {
+        DB.settings.syncUrl = fullUrl;
+      }
+      return fullUrl;
+    }
+  } catch(e){}
+  return null;
 }
 
 function setCloudStatus(st, msg) {
@@ -153,11 +180,27 @@ function mergeById(localArr = [], remoteArr = [], maxLimit = 2000) {
   return merged.slice(0, maxLimit);
 }
 
-function scheduleSyncPush(delayMs = 1200) {
-  if (_syncPushDebounceTimer) clearTimeout(_syncPushDebounceTimer);
-  _syncPushDebounceTimer = setTimeout(() => {
-    syncPush();
-  }, delayMs);
+async function autoCreateJsonBlob(payloadData) {
+  try {
+    const postRes = await fetch('https://jsonblob.com/api/jsonBlob', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payloadData || { ts: Date.now() })
+    });
+    if (postRes.ok) {
+      const loc = postRes.headers.get('Location');
+      if (loc) {
+        localStorage.setItem(KEY_SYNC_URL, loc);
+        _cloudBackoffDelay = 20000;
+        _cloudBackoffUntil = 0;
+        console.log('[CloudSync] 404 auto-healing succeeded. New Blob created:', loc);
+        return loc;
+      }
+    }
+  } catch (e) {
+    console.warn('[CloudSync] Failed auto-creating JsonBlob:', e);
+  }
+  return null;
 }
 
 async function syncPush(force = false){
@@ -229,6 +272,13 @@ async function syncPush(force = false){
       _cloudBackoffDelay = 20000;
       _cloudBackoffUntil = 0;
       setCloudStatus('ok');
+    } else if (putRes.status === 404 && cloudUrl.includes('jsonblob')) {
+      const newUrl = await autoCreateJsonBlob(payload);
+      if (newUrl) {
+        setCloudStatus('ok');
+      } else {
+        handleCloudHttpError(404);
+      }
     } else {
       handleCloudHttpError(putRes.status);
     }
@@ -263,7 +313,13 @@ async function syncPull(force = false){
     const cloudUrl = getCloudSyncUrl();
     const res = await fetch(cloudUrl, { cache: 'no-store' });
     if(!res.ok) {
-      handleCloudHttpError(res.status);
+      if (res.status === 404 && cloudUrl.includes('jsonblob')) {
+        console.warn('[CloudSync Pull] 404 received. Auto-creating new JsonBlob...');
+        const payload = buildCloudPayload();
+        await autoCreateJsonBlob(payload);
+      } else {
+        handleCloudHttpError(res.status);
+      }
       _isSyncing = false;
       return;
     }
