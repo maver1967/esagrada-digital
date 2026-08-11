@@ -180,27 +180,11 @@ function mergeById(localArr = [], remoteArr = [], maxLimit = 2000) {
   return merged.slice(0, maxLimit);
 }
 
-async function autoCreateJsonBlob(payloadData) {
-  try {
-    const postRes = await fetch('https://jsonblob.com/api/jsonBlob', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payloadData || { ts: Date.now() })
-    });
-    if (postRes.ok) {
-      const loc = postRes.headers.get('Location');
-      if (loc) {
-        localStorage.setItem(KEY_SYNC_URL, loc);
-        _cloudBackoffDelay = 20000;
-        _cloudBackoffUntil = 0;
-        console.log('[CloudSync] 404 auto-healing succeeded. New Blob created:', loc);
-        return loc;
-      }
-    }
-  } catch (e) {
-    console.warn('[CloudSync] Failed auto-creating JsonBlob:', e);
-  }
-  return null;
+function scheduleSyncPush(delayMs = 1200) {
+  if (_syncPushDebounceTimer) clearTimeout(_syncPushDebounceTimer);
+  _syncPushDebounceTimer = setTimeout(() => {
+    syncPush();
+  }, delayMs);
 }
 
 async function syncPush(force = false){
