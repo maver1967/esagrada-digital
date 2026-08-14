@@ -29,7 +29,7 @@ export default function Home() {
     const timer = setTimeout(() => {
       const appEl = document.getElementById('app');
       if (appEl) {
-        appEl.style.display = 'flex';
+        appEl.style.display = 'grid';
       }
     }, 100);
 

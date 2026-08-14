@@ -889,6 +889,23 @@ function navBadge(id){
   if(id==='anag'){ensureAnag();const f=Object.keys(DB.anag).filter(c=>anagFilled(c)>0).length;return f||'';}
   return '';
 }
+var ROLE_NAV = {
+  direcao: '*',
+  diretor:   ['diario','planificacao','salaVirtual','livropres','anag','classes','grid','tview','test','cadernetas','pautas','alunos','docs','transicao','arqanos','avisos'],
+  professor: ['diario','planificacao','salaVirtual','anag','grid','tview','test','cadernetas','pautas','alunos','docs','avisos'],
+  secretaria:['anag','teachers','cta','classes','trimestres','calendario','financa','docs','archive','arqanos','avisos'],
+  aluno:     ['salaVirtual','mural','grid','alunos'],
+  encarregado:['dash','mural','grid','alunos','financa'],
+  portaria:  ['portaria'],
+};
+var ROLE_RELABEL = {
+  aluno:      {grid:'O meu horário', alunos:'As minhas notas', mural:'Avisos', salaVirtual:'Sala Virtual'},
+  encarregado:{dash:'Painel do educando', grid:'Horário do educando', alunos:'Notas do educando', financa:'Propinas', mural:'Avisos'},
+  professor:  {grid:'Os meus horários', tview:'O meu horário', anag:'Lista de Alunos', alunos:'Notas das minhas turmas', test:'Lançar testes', diario:'Aula de hoje', salaVirtual:'Sala Virtual (LMS)', avisos:'Mural de Avisos'},
+  diretor:    {alunos:'Notas da turma', pautas:'Pautas da turma', diario:'Diário de Aula', salaVirtual:'Sala Virtual (LMS)'},
+};
+var PREVIEW_ROLE = 'direcao';
+
 function navItemBtn(n,indent){
   if(n.subs){
     const allow=allowedSet(); const relabel=ROLE_RELABEL[PREVIEW_ROLE]||{};
