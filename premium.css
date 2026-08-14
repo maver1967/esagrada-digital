@@ -869,6 +869,36 @@ table.tt td.cell:hover {
   font-weight: 800 !important;
 }
 
+/* ==================== GLOBAL NUMBER INPUT SPINNER REMOVAL & OPTIMIZATION ==================== */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type=number] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+
+/* Table Input Fields (Cadernetas, Pautas, Testes, Diário, etc.) */
+table td input:not([type=checkbox]):not([type=radio]),
+table td input[type=number],
+.caderneta-table td input,
+.pauta-tbl td input {
+  -webkit-appearance: none !important;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  text-align: center !important;
+  padding: 5px 2px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+
 
 
 
