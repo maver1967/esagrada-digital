@@ -957,6 +957,53 @@ function navItemBtn(n,indent){
   const b=navBadge(n.id);
   return `<button data-go="${n.id}" class="${UI.view===n.id?'on':''}" ${indent?'style="padding-left:34px"':''}>${I[n.icon]||I.doc}<span>${n.label}</span>${b!==''?`<span class="badge">${b}</span>`:''}</button>`;
 }
+const DEFAULT_PERMISSIONS = {
+  direcao:    { diario:'write', pautas:'write', grid:'write', salaVirtual:'write', financa:'write', anag:'write', docs:'write', portaria:'write', avisos:'write', config:'write' },
+  diretor:    { diario:'write', pautas:'write', grid:'read',  salaVirtual:'write', financa:'none',  anag:'read',  docs:'read',  portaria:'none',  avisos:'read',  config:'none' },
+  professor:  { diario:'write', pautas:'write', grid:'read',  salaVirtual:'write', financa:'none',  anag:'read',  docs:'read',  portaria:'none',  avisos:'read',  config:'none' },
+  secretaria: { diario:'read',  pautas:'read',  grid:'read',  salaVirtual:'none',  financa:'write', anag:'write', docs:'write', portaria:'none',  avisos:'write', config:'none' },
+  aluno:      { diario:'none',  pautas:'read',  grid:'read',  salaVirtual:'read',  financa:'none',  anag:'none',  docs:'none',  portaria:'none',  avisos:'read',  config:'none' },
+  encarregado:{ diario:'none',  pautas:'read',  grid:'read',  salaVirtual:'none',  financa:'read',  anag:'none',  docs:'none',  portaria:'none',  avisos:'read',  config:'none' },
+  portaria:   { diario:'none',  pautas:'none',  grid:'none',  salaVirtual:'none',  financa:'none',  anag:'none',  docs:'none',  portaria:'write', avisos:'none',  config:'none' },
+};
+
+function getRolePermission(role, moduleKey) {
+  if (role === 'direcao') return 'write';
+  if (DB && DB.permissions && DB.permissions[role] && typeof DB.permissions[role][moduleKey] === 'string') {
+    return DB.permissions[role][moduleKey];
+  }
+  return (DEFAULT_PERMISSIONS[role] && DEFAULT_PERMISSIONS[role][moduleKey]) || 'none';
+}
+
+function canReadModule(moduleKey, role) {
+  const r = role || PREVIEW_ROLE || (AUTH_USER ? AUTH_USER.role : 'direcao');
+  const perm = getRolePermission(r, moduleKey);
+  return perm === 'read' || perm === 'write';
+}
+
+function canWriteModule(moduleKey, role) {
+  const r = role || PREVIEW_ROLE || (AUTH_USER ? AUTH_USER.role : 'direcao');
+  return getRolePermission(r, moduleKey) === 'write';
+}
+
+window.togglePermissionCell = function(role, moduleKey) {
+  if (role === 'direcao') {
+    toast('O perfil de Direção tem sempre acesso total (Editor).', true);
+    return;
+  }
+  if (!DB.permissions) DB.permissions = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS));
+  if (!DB.permissions[role]) DB.permissions[role] = { ...DEFAULT_PERMISSIONS[role] };
+  
+  const current = DB.permissions[role][moduleKey] || 'none';
+  const nextMap = { none: 'read', read: 'write', write: 'none' };
+  DB.permissions[role][moduleKey] = nextMap[current] || 'read';
+  
+  persist();
+  buildNav();
+  render();
+  toast(`Permissão de ${ROLES[role]?.label || role} em ${moduleKey} alterada para: ${DB.permissions[role][moduleKey].toUpperCase()} ✓`);
+};
+
 function allowedSet(){
   const r = PREVIEW_ROLE || (AUTH_USER ? AUTH_USER.role : 'direcao');
   if (r === 'direcao') return null;
@@ -5278,10 +5325,7 @@ function ensureTeacherAssignmentsFix(db){
 
   function getTeacherForSubjAndClass(sid, cid) {
     if (filSubjIds.includes(sid)) {
-      if (cid === 'c11' || cid === '11' || cid === '11ª' || (typeof cid === 'string' && cid.includes('11'))) {
-        return 'p114'; // Pe. Maver lecciona Filosofia exclusivamente na classe 11ª (Turma 11)
-      }
-      return 'p104'; // Prof. Fausto Ghirardelli assume Filosofia nas turmas 10ª 1 (10-1/10A) e 10ª 2 (10-2/10B)
+      return 'p114'; // Pe. Roberto G. Maver lecciona Filosofia em TODAS as turmas (10-1, 10-2, 11)
     }
     return sidToTid[sid] || null;
   }
@@ -5353,9 +5397,9 @@ function ensureTeacherAssignmentsFix(db){
   // 4. Update teacher status labels
   if (Array.isArray(db.teachers)) {
     const maver = db.teachers.find(t => t.id === 'p114' || (t.name || '').includes('Maver'));
-    if (maver) maver.disciplinas = 'Filosofia (11ª), Intr. à Filosofia (11ª)';
+    if (maver) maver.disciplinas = 'Filosofia, Intr. à Filosofia, Ética e Cidadania';
     const fausto = db.teachers.find(t => t.id === 'p104' || (t.name || '').includes('Fausto'));
-    if (fausto) fausto.disciplinas = 'Italiano, Filosofia (10ª)';
+    if (fausto) fausto.disciplinas = 'Italiano';
   }
 }
 
