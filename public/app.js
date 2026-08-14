@@ -957,7 +957,37 @@ function navItemBtn(n,indent){
   const b=navBadge(n.id);
   return `<button data-go="${n.id}" class="${UI.view===n.id?'on':''}" ${indent?'style="padding-left:34px"':''}>${I[n.icon]||I.doc}<span>${n.label}</span>${b!==''?`<span class="badge">${b}</span>`:''}</button>`;
 }
-function allowedSet(){ const a=ROLE_NAV[PREVIEW_ROLE]; return a==='*'?null:new Set(a); }
+function allowedSet(){
+  const r = PREVIEW_ROLE || (AUTH_USER ? AUTH_USER.role : 'direcao');
+  if (r === 'direcao') return null;
+
+  const baseSet = ROLE_NAV[r];
+  let allowed = (baseSet && baseSet !== '*') ? new Set(baseSet) : new Set();
+
+  const moduleViewsMap = {
+    diario: ['diario','planificacao','livropres'],
+    pautas: ['pautas','cadernetas','test','alunos'],
+    grid: ['grid','tview'],
+    salaVirtual: ['salaVirtual','mural'],
+    financa: ['financa'],
+    anag: ['anag','teachers','cta','classes','trimestres','calendario','archive','transicao','arqanos'],
+    docs: ['docs'],
+    portaria: ['portaria'],
+    avisos: ['avisos','mural'],
+    config: ['config']
+  };
+
+  Object.keys(moduleViewsMap).forEach(modKey => {
+    const perm = getRolePermission(r, modKey);
+    if (perm !== 'none') {
+      moduleViewsMap[modKey].forEach(vid => allowed.add(vid));
+    }
+  });
+
+  allowed.add('dash');
+  return allowed;
+}
+
 function userCardHtml() {
   if (!AUTH_USER) return '';
   const roleLabel = ROLES[AUTH_USER.role] ? ROLES[AUTH_USER.role].label : AUTH_USER.role;
@@ -977,11 +1007,11 @@ function userCardHtml() {
         </div>
       </div>
       <div style="display:flex;gap:6px">
-        <button type="button" onclick="openChangePassModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:5px 6px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
+        <button type="button" onclick="openChangePassModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:6px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
           🔑 Password
         </button>
-        <button type="button" onclick="doLogout()" style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);color:#fca5a5;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
-          🚪 Sair
+        <button type="button" onclick="doLogout()" style="flex:1;background:rgba(220,38,38,.25);border:1px solid rgba(220,38,38,.45);color:#fca5a5;padding:6px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px" title="Sair do perfil e voltar ao Portal de Ingressos">
+          🚪 Sair / Mudar
         </button>
       </div>
     </div>
