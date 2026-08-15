@@ -11,15 +11,15 @@ export default function HorariosPage() {
   // Timetable grid structure for 10-1, 10-2, 11ª
   const scheduleMap: Record<string, Array<{ time: string; seg: string; ter: string; qua: string; qui: string; sex: string }>> = {
     '10-1': [
-      { time: '07:30 - 08:15', seg: 'Português (p101)', ter: 'Filosofia (Fausto Ghirardelli)', qua: 'Matemática (p105)', qui: 'Italiano (Fausto Ghirardelli)', sex: 'Ed. Física (p109)' },
-      { time: '08:20 - 09:05', seg: 'Português (p101)', ter: 'Filosofia (Fausto Ghirardelli)', qua: 'Matemática (p105)', qui: 'Italiano (Fausto Ghirardelli)', sex: 'Ed. Física (p109)' },
+      { time: '07:30 - 08:15', seg: 'Português (p101)', ter: 'Filosofia (Pe. Maver)', qua: 'Matemática (p105)', qui: 'Italiano (Fausto Ghirardelli)', sex: 'Ed. Física (p109)' },
+      { time: '08:20 - 09:05', seg: 'Português (p101)', ter: 'Filosofia (Pe. Maver)', qua: 'Matemática (p105)', qui: 'Italiano (Fausto Ghirardelli)', sex: 'Ed. Física (p109)' },
       { time: '09:20 - 10:05', seg: 'Inglês (p102)', ter: 'Química (p107)', qua: 'História (p101)', qui: 'TIC (p113)', sex: 'Biologia (p108)' },
       { time: '10:10 - 10:55', seg: 'Inglês (p102)', ter: 'Física (p106)', qua: 'Geografia (p112)', qui: 'TIC (p113)', sex: 'Biologia (p108)' },
       { time: '11:10 - 11:55', seg: 'Matemática (p105)', ter: 'Física (p106)', qua: 'Geografia (p112)', qui: 'Química (p107)', sex: 'NE (p111)' },
     ],
     '10-2': [
-      { time: '07:30 - 08:15', seg: 'Matemática (p105)', ter: 'Português (p101)', qua: 'Filosofia (Fausto Ghirardelli)', qui: 'Química (p107)', sex: 'TIC (p113)' },
-      { time: '08:20 - 09:05', seg: 'Matemática (p105)', ter: 'Português (p101)', qua: 'Filosofia (Fausto Ghirardelli)', qui: 'Química (p107)', sex: 'TIC (p113)' },
+      { time: '07:30 - 08:15', seg: 'Matemática (p105)', ter: 'Português (p101)', qua: 'Filosofia (Pe. Maver)', qui: 'Química (p107)', sex: 'TIC (p113)' },
+      { time: '08:20 - 09:05', seg: 'Matemática (p105)', ter: 'Português (p101)', qua: 'Filosofia (Pe. Maver)', qui: 'Química (p107)', sex: 'TIC (p113)' },
       { time: '09:20 - 10:05', seg: 'Biologia (p108)', ter: 'Inglês (p102)', qua: 'Física (p106)', qui: 'NE (p111)', sex: 'Ed. Física (p109)' },
       { time: '10:10 - 10:55', seg: 'Biologia (p108)', ter: 'Inglês (p102)', qua: 'Física (p106)', qui: 'NE (p111)', sex: 'Ed. Física (p109)' },
     ],
@@ -81,11 +81,7 @@ export default function HorariosPage() {
           <CheckCircle2 className="w-5 h-5 text-amber-400 shrink-0" />
           <div>
             <strong>Atribuição Docente Activa:</strong>{' '}
-            {selectedClass === '11' ? (
-              <span>Pe. Roberto G. Maver lecciona Filosofia na 11ª Classe.</span>
-            ) : (
-              <span>Prof. Fausto Ghirardelli lecciona Filosofia na turma {selectedClass}.</span>
-            )}
+            <span>Pe. Roberto G. Maver lecciona Filosofia em todas as turmas (10-1, 10-2, 11ª). Prof. Fausto Ghirardelli lecciona Italiano.</span>
           </div>
         </div>
 

@@ -133,7 +133,7 @@ export default function LoginPage() {
             >
               <div>
                 <span className="font-bold text-amber-400">Prof. Fausto</span>
-                <span className="block text-[10px] text-slate-400">p104 (Filos. 10ª)</span>
+                <span className="block text-[10px] text-slate-400">p104 (Italiano)</span>
               </div>
               <BookOpen className="w-3.5 h-3.5 text-slate-400" />
             </button>
@@ -144,7 +144,7 @@ export default function LoginPage() {
             >
               <div>
                 <span className="font-bold text-amber-400">Pe. Maver</span>
-                <span className="block text-[10px] text-slate-400">p114 (Filos. 11ª)</span>
+                <span className="block text-[10px] text-slate-400">p114 (Filosofia 10ª e 11ª)</span>
               </div>
               <BookOpen className="w-3.5 h-3.5 text-slate-400" />
             </button>

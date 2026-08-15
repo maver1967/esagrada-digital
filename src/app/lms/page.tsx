@@ -15,7 +15,7 @@ export default function LMSPage() {
       author: 'Pe. Roberto Giuseppe Maver',
       role: 'Professor / Direção',
       title: 'Trabalho Prático: Ética e Filosofia Moçambicana',
-      content: 'Estimados estudantes da 11ª Classe, por favor façam a leitura do Capítulo 3 e enviem os resumos até a próxima Segunda-feira.',
+      content: 'Estimados estudantes da 10ª e 11ª Classe, por favor façam a leitura do Capítulo 3 e enviem os resumos até a próxima Segunda-feira.',
       date: '10 de Agosto de 2026',
       files: ['Ficha_Apoio_Filosofia_Cap3.pdf'],
     },

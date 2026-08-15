@@ -162,10 +162,10 @@ export default function DashboardPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">p114</span>
               </div>
               <p className="text-xs text-slate-300">
-                <strong className="text-amber-400">Filosofia:</strong> Exclusivamente na <span className="text-white font-bold">11ª Classe</span>
+                <strong className="text-amber-400">Filosofia:</strong> Turmas <span className="text-white font-bold">10ª 1, 10ª 2 e 11ª Classe</span>
               </p>
-              <div className="text-[11px] text-slate-500 border-t border-white/5 pt-2">
-                Rinuncia às turmas 10-1 e 10-2.
+              <div className="text-[11px] text-slate-400 border-t border-white/5 pt-2">
+                Lecciona Filosofia em todas as turmas da escola.
               </div>
             </div>
 
@@ -176,11 +176,11 @@ export default function DashboardPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">p104</span>
               </div>
               <p className="text-xs text-slate-300">
-                <strong className="text-amber-400">Filosofia:</strong> Turmas <span className="text-white font-bold">10ª 1 (10-1)</span> e <span className="text-white font-bold">10ª 2 (10-2)</span>
+                <strong className="text-blue-400">Italiano:</strong> Turmas <span className="text-white font-bold">10-1, 10-2 e 11ª Classe</span>
               </p>
-              <p className="text-xs text-slate-300">
-                <strong className="text-blue-400">Italiano:</strong> Turmas 10-1 e 11ª
-              </p>
+              <div className="text-[11px] text-slate-400 border-t border-white/5 pt-2">
+                Lecciona a disciplina de Italiano.
+              </div>
             </div>
 
             {/* Outros Docentes */}
