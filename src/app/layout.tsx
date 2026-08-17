@@ -4,7 +4,7 @@ import Script from 'next/script';
 import SessionProvider from '@/presentation/components/SessionProvider';
 
 export const metadata: Metadata = {
-  title: 'Gestor de Horários · ESAGRADA v4.2.4',
+  title: 'Gestor de Horários · ESAGRADA v5.1.0',
   description: 'Plataforma Digital de Gestão Escolar, Horários e Pautas da EPUSF Maxixe',
   manifest: '/manifest.json',
   icons: {
@@ -31,8 +31,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/style.css?v=4.2.4-fix2" />
-        <link rel="stylesheet" href="/premium.css?v=4.2.4-fix2" />
+        <link rel="stylesheet" href="/style.css?v=5.1.0" />
+        <link rel="stylesheet" href="/premium.css?v=5.1.0" />
       </head>
       <body className="antialiased">
         <SessionProvider>
@@ -46,7 +46,7 @@ export default function RootLayout({
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" strategy="afterInteractive" />
         <Script src="https://unpkg.com/html5-qrcode" strategy="afterInteractive" />
         <Script src="/qrcode.js" strategy="afterInteractive" />
-        <Script src="/app.js?v=4.2.4-fix1" strategy="lazyOnload" />
+        <Script src="/app.js?v=5.1.0" strategy="lazyOnload" />
       </body>
     </html>
   );
