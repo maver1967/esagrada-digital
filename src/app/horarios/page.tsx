@@ -58,7 +58,7 @@ const DISCIPLINES = [
 
 const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
   '10-1': {
-    Filosofia: 'p114',
+    Filosofia: 'p104',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -73,7 +73,7 @@ const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
     NE: 'p111',
   },
   '10-2': {
-    Filosofia: 'p114',
+    Filosofia: 'p104',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -88,7 +88,7 @@ const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
     NE: 'p111',
   },
   '11': {
-    Filosofia: 'p114',
+    Filosofia: 'p104',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -150,19 +150,19 @@ export default function HorariosPage() {
     showToast(`Turma ${turma}: ${disc} atribuída a ${tObj?.name || teacherId}`);
   };
 
-  // Quick Preset: Assign Pe. Maver to Filosofia in all classes
-  const applyPresetMaverFilosofia = () => {
+  // Quick Preset: Assign Prof. Fausto to Filosofia in all classes
+  const applyPresetFaustoFilosofia = () => {
     const next = {
       ...assignments,
-      '10-1': { ...(assignments['10-1'] || {}), Filosofia: 'p114', Italiano: 'p104' },
-      '10-2': { ...(assignments['10-2'] || {}), Filosofia: 'p114', Italiano: 'p104' },
-      '11': { ...(assignments['11'] || {}), Filosofia: 'p114', Italiano: 'p104' },
+      '10-1': { ...(assignments['10-1'] || {}), Filosofia: 'p104', Italiano: 'p104' },
+      '10-2': { ...(assignments['10-2'] || {}), Filosofia: 'p104', Italiano: 'p104' },
+      '11': { ...(assignments['11'] || {}), Filosofia: 'p104', Italiano: 'p104' },
     };
     setAssignments(next);
     try {
       localStorage.setItem('esagrada_teacher_assignments_v2', JSON.stringify(next));
     } catch (e) {}
-    showToast('⚡ Sucesso! Filosofia atribuída a Pe. Maver em 10-1, 10-2 e 11ª; Italiano a Prof. Fausto.');
+    showToast('⚡ Sucesso! Filosofia e Italiano atribuídos a Prof. Fausto em 10-1, 10-2 e 11ª.');
   };
 
   // Helper to format slot text
@@ -179,8 +179,8 @@ export default function HorariosPage() {
   const getScheduleForClass = (cls: string) => {
     if (cls === '10-1') {
       return [
-        { time: '07:30 - 08:15', seg: getSlotText('Português', 'p101'), ter: getSlotText('Filosofia', 'p114'), qua: getSlotText('Matemática', 'p105'), qui: getSlotText('Italiano', 'p104'), sex: getSlotText('Ed. Física', 'p109') },
-        { time: '08:20 - 09:05', seg: getSlotText('Português', 'p101'), ter: getSlotText('Filosofia', 'p114'), qua: getSlotText('Matemática', 'p105'), qui: getSlotText('Italiano', 'p104'), sex: getSlotText('Ed. Física', 'p109') },
+        { time: '07:30 - 08:15', seg: getSlotText('Português', 'p101'), ter: getSlotText('Filosofia', 'p104'), qua: getSlotText('Matemática', 'p105'), qui: getSlotText('Italiano', 'p104'), sex: getSlotText('Ed. Física', 'p109') },
+        { time: '08:20 - 09:05', seg: getSlotText('Português', 'p101'), ter: getSlotText('Filosofia', 'p104'), qua: getSlotText('Matemática', 'p105'), qui: getSlotText('Italiano', 'p104'), sex: getSlotText('Ed. Física', 'p109') },
         { time: '09:20 - 10:05', seg: getSlotText('Inglês', 'p102'), ter: getSlotText('Química', 'p107'), qua: getSlotText('História', 'p101'), qui: getSlotText('TIC', 'p113'), sex: getSlotText('Biologia', 'p108') },
         { time: '10:10 - 10:55', seg: getSlotText('Inglês', 'p102'), ter: getSlotText('Física', 'p106'), qua: getSlotText('Geografia', 'p112'), qui: getSlotText('TIC', 'p113'), sex: getSlotText('Biologia', 'p108') },
         { time: '11:10 - 11:55', seg: getSlotText('Matemática', 'p105'), ter: getSlotText('Física', 'p106'), qua: getSlotText('Geografia', 'p112'), qui: getSlotText('Química', 'p107'), sex: getSlotText('NE', 'p111') },
@@ -188,23 +188,23 @@ export default function HorariosPage() {
     }
     if (cls === '10-2') {
       return [
-        { time: '07:30 - 08:15', seg: getSlotText('Matemática', 'p105'), ter: getSlotText('Português', 'p101'), qua: getSlotText('Filosofia', 'p114'), qui: getSlotText('Química', 'p107'), sex: getSlotText('TIC', 'p113') },
-        { time: '08:20 - 09:05', seg: getSlotText('Matemática', 'p105'), ter: getSlotText('Português', 'p101'), qua: getSlotText('Filosofia', 'p114'), qui: getSlotText('Química', 'p107'), sex: getSlotText('TIC', 'p113') },
+        { time: '07:30 - 08:15', seg: getSlotText('Matemática', 'p105'), ter: getSlotText('Português', 'p101'), qua: getSlotText('Filosofia', 'p104'), qui: getSlotText('Química', 'p107'), sex: getSlotText('TIC', 'p113') },
+        { time: '08:20 - 09:05', seg: getSlotText('Matemática', 'p105'), ter: getSlotText('Português', 'p101'), qua: getSlotText('Filosofia', 'p104'), qui: getSlotText('Química', 'p107'), sex: getSlotText('TIC', 'p113') },
         { time: '09:20 - 10:05', seg: getSlotText('Biologia', 'p108'), ter: getSlotText('Inglês', 'p102'), qua: getSlotText('Física', 'p106'), qui: getSlotText('NE', 'p111'), sex: getSlotText('Ed. Física', 'p109') },
         { time: '10:10 - 10:55', seg: getSlotText('Biologia', 'p108'), ter: getSlotText('Inglês', 'p102'), qua: getSlotText('Física', 'p106'), qui: getSlotText('NE', 'p111'), sex: getSlotText('Ed. Física', 'p109') },
       ];
     }
     return [
-      { time: '07:30 - 08:15', seg: getSlotText('Filosofia', 'p114'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
-      { time: '08:20 - 09:05', seg: getSlotText('Filosofia', 'p114'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
+      { time: '07:30 - 08:15', seg: getSlotText('Filosofia', 'p104'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
+      { time: '08:20 - 09:05', seg: getSlotText('Filosofia', 'p104'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
       { time: '09:20 - 10:05', seg: getSlotText('História', 'p101'), ter: getSlotText('Geografia', 'p112'), qua: getSlotText('Física', 'p106'), qui: getSlotText('Química', 'p107'), sex: getSlotText('Agro-Pecuária', 'p108') },
       { time: '10:10 - 10:55', seg: getSlotText('História', 'p101'), ter: getSlotText('Geografia', 'p112'), qua: getSlotText('Física', 'p106'), qui: getSlotText('Química', 'p107'), sex: getSlotText('Agro-Pecuária', 'p108') },
     ];
   };
 
   const currentSchedule = getScheduleForClass(selectedClass);
-  const filTeacherId = assignments[selectedClass]?.['Filosofia'] || 'p114';
-  const filTeacherName = TEACHERS.find((t) => t.id === filTeacherId)?.name || 'Pe. Roberto G. Maver';
+  const filTeacherId = assignments[selectedClass]?.['Filosofia'] || 'p104';
+  const filTeacherName = TEACHERS.find((t) => t.id === filTeacherId)?.name || 'Prof. Fausto Ghirardelli';
 
   return (
     <div className="min-h-screen pb-12 bg-slate-950 text-slate-100">
@@ -282,11 +282,11 @@ export default function HorariosPage() {
           </div>
 
           <button
-            onClick={applyPresetMaverFilosofia}
+            onClick={applyPresetFaustoFilosofia}
             className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
           >
             <Sparkles className="w-4 h-4" />
-            Atribuir Pe. Maver (Filosofia em 10ª 1, 10ª 2 e 11ª)
+            Atribuir Prof. Fausto (Filosofia em 10ª 1, 10ª 2 e 11ª)
           </button>
         </div>
 
@@ -397,7 +397,7 @@ export default function HorariosPage() {
 
                   <div className="space-y-3">
                     {DISCIPLINES.filter((d) => assignments[turma]?.[d] !== undefined || d === 'Filosofia' || d === 'Italiano').map((disc) => {
-                      const currentTid = assignments[turma]?.[disc] || (disc === 'Filosofia' ? 'p114' : disc === 'Italiano' ? 'p104' : 'p101');
+                      const currentTid = assignments[turma]?.[disc] || (disc === 'Filosofia' ? 'p104' : disc === 'Italiano' ? 'p104' : 'p101');
                       return (
                         <div
                           key={disc}
@@ -405,9 +405,9 @@ export default function HorariosPage() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-amber-300">{disc}</span>
-                            {currentTid === 'p114' && (
+                            {currentTid === 'p104' && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold">
-                                Pe. Maver
+                                Prof. Fausto
                               </span>
                             )}
                           </div>
