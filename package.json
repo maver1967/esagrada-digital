@@ -8,6 +8,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "data:export": "node scripts/export_data.cjs",
+    "sync:git": "git add . && git commit -m \"update: data sync\" && git push origin main",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:db:push": "prisma db push",
