@@ -79,15 +79,6 @@ export default function Home() {
           </div>
           <div className="actions">
             <button
-              className="fsbtn btn-projetor-toggle"
-              id="projBtn"
-              aria-label="Modo Projetor"
-              title="Modo Projetor (Ecrã Inteiro · Sem Scroll)"
-              onClick={() => (window as any).toggleProjectorMode && (window as any).toggleProjectorMode()}
-            >
-              <span style={{ fontSize: '16px' }}>📺</span>
-            </button>
-            <button
               className="fsbtn"
               id="fsBtn"
               aria-label="Ecrã inteiro"
@@ -170,16 +161,6 @@ export default function Home() {
         </main>
       </div>
 
-      <div className="projetor-exit-bar" id="projetorExitBar">
-        <span>📺 Modo Projetor Activo</span>
-        <button
-          type="button"
-          className="projetor-exit-btn"
-          onClick={() => (window as any).toggleProjectorMode && (window as any).toggleProjectorMode(false)}
-        >
-          Sair (ESC)
-        </button>
-      </div>
 
       <div className="mask" id="mask">
         <div className="modal" id="modal"></div>
