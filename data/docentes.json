@@ -1,0 +1,142 @@
+[
+  {
+    "id": "p101",
+    "title": "",
+    "name": "Edilson Arlindo Chissano",
+    "email": "chissano@esagrada.mz",
+    "disciplinas": [
+      "Português",
+      "História"
+    ]
+  },
+  {
+    "id": "p102",
+    "title": "",
+    "name": "Filipe João Majone",
+    "email": "majone@esagrada.mz",
+    "disciplinas": [
+      "Inglês"
+    ]
+  },
+  {
+    "id": "p103",
+    "title": "",
+    "name": "Kyambesi Kabulo Felix",
+    "email": "felix@esagrada.mz",
+    "disciplinas": [
+      "Francês"
+    ]
+  },
+  {
+    "id": "p104",
+    "title": "",
+    "name": "Fausto Ghirardelli",
+    "email": "fausto@esagrada.mz",
+    "disciplinas": [
+      "Italiano"
+    ]
+  },
+  {
+    "id": "p105",
+    "title": "",
+    "name": "Luís Adelino Ngoca",
+    "email": "ngoca@esagrada.mz",
+    "disciplinas": [
+      "Matemática"
+    ]
+  },
+  {
+    "id": "p106",
+    "title": "",
+    "name": "Marcelo da Glória Joaquim Bota Júnior",
+    "email": "bota@esagrada.mz",
+    "disciplinas": [
+      "Física"
+    ]
+  },
+  {
+    "id": "p107",
+    "title": "",
+    "name": "Gabriel Zacarias Caetano",
+    "email": "caetano@esagrada.mz",
+    "disciplinas": [
+      "Química"
+    ]
+  },
+  {
+    "id": "p108",
+    "title": "",
+    "name": "Lencinio Zacarias Vilanculo",
+    "email": "vilanculo@esagrada.mz",
+    "disciplinas": [
+      "Biologia",
+      "Agro-Pecuária"
+    ]
+  },
+  {
+    "id": "p109",
+    "title": "",
+    "name": "Mércia Luciano Cuamba",
+    "email": "cuamba@esagrada.mz",
+    "disciplinas": [
+      "Ed. Física"
+    ]
+  },
+  {
+    "id": "p110",
+    "title": "",
+    "name": "Milton Tomás Taela Guilima",
+    "email": "guilima@esagrada.mz",
+    "disciplinas": [
+      "Psicopedagogia"
+    ]
+  },
+  {
+    "id": "p111",
+    "title": "",
+    "name": "Tomás da Conceição Joanninha",
+    "email": "joanninha@esagrada.mz",
+    "disciplinas": [
+      "Noções de Empreendedorismo (NE)"
+    ]
+  },
+  {
+    "id": "p112",
+    "title": "",
+    "name": "Daniel Zameia",
+    "email": "zameia@esagrada.mz",
+    "disciplinas": [
+      "Geografia"
+    ]
+  },
+  {
+    "id": "p113",
+    "title": "",
+    "name": "Salvado Mário Machava",
+    "email": "machava@esagrada.mz",
+    "disciplinas": [
+      "TIC",
+      "Informática Avançada"
+    ]
+  },
+  {
+    "id": "p114",
+    "title": "Pe.",
+    "name": "Roberto Giuseppe Maver",
+    "email": "maver@esagrada.mz",
+    "disciplinas": [
+      "Filosofia",
+      "Intr. à Filosofia",
+      "Ética e Cidadania"
+    ]
+  },
+  {
+    "id": "p115",
+    "title": "",
+    "name": "Cheila Francisco Naife",
+    "email": "naife@esagrada.mz",
+    "disciplinas": [
+      "Inglês Integral"
+    ]
+  }
+]

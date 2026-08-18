@@ -1,0 +1,116 @@
+[
+  {
+    "id": "POR",
+    "name": "Português",
+    "category": "Tronco Comum",
+    "code": "PT"
+  },
+  {
+    "id": "ING",
+    "name": "Inglês",
+    "category": "Tronco Comum",
+    "code": "ING"
+  },
+  {
+    "id": "FIL",
+    "name": "Filosofia",
+    "category": "Tronco Comum",
+    "code": "FIL"
+  },
+  {
+    "id": "IFIC",
+    "name": "Intr. à Filosofia",
+    "category": "Tronco Comum",
+    "code": "IFIC"
+  },
+  {
+    "id": "MAT",
+    "name": "Matemática",
+    "category": "Tronco Comum",
+    "code": "MAT"
+  },
+  {
+    "id": "TIC",
+    "name": "TICs",
+    "category": "Tronco Comum",
+    "code": "TICS"
+  },
+  {
+    "id": "EDF",
+    "name": "Educação Física",
+    "category": "Tronco Comum",
+    "code": "EDF"
+  },
+  {
+    "id": "FRA",
+    "name": "Francês",
+    "category": "Específico",
+    "code": "FRA"
+  },
+  {
+    "id": "HIS",
+    "name": "História",
+    "category": "Específico",
+    "code": "HIS"
+  },
+  {
+    "id": "GEO",
+    "name": "Geografia",
+    "category": "Específico",
+    "code": "GEO"
+  },
+  {
+    "id": "QUI",
+    "name": "Química",
+    "category": "Específico",
+    "code": "QUI"
+  },
+  {
+    "id": "FIS",
+    "name": "Física",
+    "category": "Específico",
+    "code": "FIS"
+  },
+  {
+    "id": "BIO",
+    "name": "Biologia",
+    "category": "Específico",
+    "code": "BIO"
+  },
+  {
+    "id": "PSI",
+    "name": "Psicopedagogia",
+    "category": "Profissionalizante",
+    "code": "PSI"
+  },
+  {
+    "id": "AGRO",
+    "name": "Agro-Pecuária",
+    "category": "Profissionalizante",
+    "code": "AGRO"
+  },
+  {
+    "id": "NE",
+    "name": "Noções de Empreend.",
+    "category": "Profissionalizante",
+    "code": "NE"
+  },
+  {
+    "id": "ITA",
+    "name": "Italiano",
+    "category": "Currículo Interno",
+    "code": "ITA"
+  },
+  {
+    "id": "IINT",
+    "name": "Inglês Integral",
+    "category": "Currículo Interno",
+    "code": "IINT"
+  },
+  {
+    "id": "INFAV",
+    "name": "Informática Avançada",
+    "category": "Currículo Interno",
+    "code": "INFAV"
+  }
+]

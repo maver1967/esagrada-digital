@@ -1,0 +1,23 @@
+[
+  {
+    "id": "10-1",
+    "name": "10ª 1",
+    "classe": "10ª",
+    "tipo": "Mista A / B1 / B2",
+    "totalAlunos": 32
+  },
+  {
+    "id": "10-2",
+    "name": "10ª 2",
+    "classe": "10ª",
+    "tipo": "Pura B2",
+    "totalAlunos": 30
+  },
+  {
+    "id": "11",
+    "name": "11ª 1",
+    "classe": "11ª",
+    "tipo": "Mista A / B1 / B2",
+    "totalAlunos": 42
+  }
+]
