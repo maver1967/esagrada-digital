@@ -58,7 +58,7 @@ const DISCIPLINES = [
 
 const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
   '10-1': {
-    Filosofia: 'p104',
+    Filosofia: 'p114',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -73,7 +73,7 @@ const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
     NE: 'p111',
   },
   '10-2': {
-    Filosofia: 'p104',
+    Filosofia: 'p114',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -88,7 +88,7 @@ const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
     NE: 'p111',
   },
   '11': {
-    Filosofia: 'p104',
+    Filosofia: 'p114',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -203,8 +203,8 @@ export default function HorariosPage() {
   };
 
   const currentSchedule = getScheduleForClass(selectedClass);
-  const filTeacherId = assignments[selectedClass]?.['Filosofia'] || 'p104';
-  const filTeacherName = TEACHERS.find((t) => t.id === filTeacherId)?.name || 'Prof. Fausto Ghirardelli';
+  const filTeacherId = assignments[selectedClass]?.['Filosofia'] || 'p114';
+  const filTeacherName = TEACHERS.find((t) => t.id === filTeacherId)?.name || 'Pe. Roberto G. Maver';
 
   return (
     <div className="min-h-screen pb-12 bg-slate-950 text-slate-100">
