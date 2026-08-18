@@ -40,6 +40,7 @@ const TEACHERS = [
 
 const DISCIPLINES = [
   'Filosofia',
+  'Intr. à Filosofia',
   'Italiano',
   'Português',
   'Inglês',
@@ -88,7 +89,7 @@ const INITIAL_ASSIGNMENTS: Record<string, Record<string, string>> = {
     NE: 'p111',
   },
   '11': {
-    Filosofia: 'p114',
+    'Intr. à Filosofia': 'p114',
     Italiano: 'p104',
     Português: 'p101',
     Inglês: 'p102',
@@ -195,8 +196,8 @@ export default function HorariosPage() {
       ];
     }
     return [
-      { time: '07:30 - 08:15', seg: getSlotText('Filosofia', 'p104'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
-      { time: '08:20 - 09:05', seg: getSlotText('Filosofia', 'p104'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
+      { time: '07:30 - 08:15', seg: getSlotText('Intr. à Filosofia', 'p114'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
+      { time: '08:20 - 09:05', seg: getSlotText('Intr. à Filosofia', 'p114'), ter: getSlotText('Matemática', 'p105'), qua: getSlotText('Italiano', 'p104'), qui: getSlotText('Português', 'p101'), sex: getSlotText('Psicopedagogia', 'p110') },
       { time: '09:20 - 10:05', seg: getSlotText('História', 'p101'), ter: getSlotText('Geografia', 'p112'), qua: getSlotText('Física', 'p106'), qui: getSlotText('Química', 'p107'), sex: getSlotText('Agro-Pecuária', 'p108') },
       { time: '10:10 - 10:55', seg: getSlotText('História', 'p101'), ter: getSlotText('Geografia', 'p112'), qua: getSlotText('Física', 'p106'), qui: getSlotText('Química', 'p107'), sex: getSlotText('Agro-Pecuária', 'p108') },
     ];
