@@ -25,15 +25,9 @@ export default function Home() {
       }
     };
 
-    // Ensure #app is displayed once scripts load
-    const timer = setTimeout(() => {
-      const appEl = document.getElementById('app');
-      if (appEl) {
-        appEl.style.display = 'grid';
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Version tag update
+    const versionSpan = document.getElementById('versionPill');
+    if (versionSpan) versionSpan.textContent = 'v5.3.0';
   }, []);
 
   return (
