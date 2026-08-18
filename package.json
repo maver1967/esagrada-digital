@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "data:export": "node scripts/export_data.cjs",
-    "sync:git": "git add . && git commit -m \"update: data sync\" && git push origin main",
+    "sync:git": "node scripts/export_data.cjs && git add . && git commit -m \"update: data sync\" && git push origin main && git push origin main:gh-pages --force",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:db:push": "prisma db push",
